@@ -1,4 +1,5 @@
 #include "../header/socket_handler.h"
+#include <asm-generic/socket.h>
 
 void socket_error(const char *msg) {
     perror(msg);
@@ -24,9 +25,14 @@ int open_raw_socket(const char *interface) {
     mr.mr_ifindex = ifindex;
     mr.mr_type = PACKET_MR_PROMISC;
 
+    struct timeval timeout = { .tv_sec = TIME_OUT_SECONDS, .tv_usec = 0};
+
     // Não joga fora o que identifica como lixo: Modo promíscuo
     if (setsockopt(sockfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) == -1)
-        socket_error("Erro ao fazer setsockopt");
+        socket_error("Erro ao fazer setsockopt para modo promíscuo");
+
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *) &timeout, sizeof(timeout)) == -1)
+        socket_error("Erro ao fazer setsockopt para timeout");
 
     return sockfd;
 }
