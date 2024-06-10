@@ -1,14 +1,17 @@
 #include "../header/socket_handler.h"
 
 int main(int argc, char *argv[]) {
-    int sockfd = open_raw_socket();
-    struct sockaddr_ll saddr = get_interface("lo");
-    unsigned int saddr_len = sizeof(saddr);
+    if (argc != 2) {
+        fprintf(stderr, "Uso: %s <interface>\n", argv[0]);
+        return 1;
+    }
+
+    int sockfd = open_raw_socket(argv[1]);
 
     char *data = "Hello, this is a message from server";
 
-    if (sendto(sockfd, data, strlen(data)+1, 0, (struct sockaddr *)&saddr, saddr_len) < 0)
-        error("Erro ao enviar dados");
+    if (send(sockfd, data, strlen(data)+1, 0) < 0)
+        socket_error("Erro ao enviar dados");
 
     close(sockfd);
 
