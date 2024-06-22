@@ -1,5 +1,4 @@
 #include "../header/socket_handler.h"
-#include <asm-generic/socket.h>
 
 void socket_error(const char *msg) {
     perror(msg);

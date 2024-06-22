@@ -7,7 +7,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define BUF_SIZE 1024
 #define TIME_OUT_SECONDS 30
 
 void socket_error(const char *msg);

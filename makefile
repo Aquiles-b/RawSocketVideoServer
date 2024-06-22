@@ -11,14 +11,17 @@ server: server.o
 =======
 CFLAGS = -Wall -g
 
+COMMON_OBJS = obj/socket_handler.o obj/common_packets.o
+
 all: server client
 
-server: obj/server.o obj/socket_handler.o
-	$(CC) $(CFLAGS) -o server obj/server.o obj/socket_handler.o
+server: obj/server.o $(COMMON_OBJS)
+	$(CC) $(CFLAGS) -o server obj/server.o $(COMMON_OBJS)
 
-client: obj/client.o obj/socket_handler.o
-	$(CC) $(CFLAGS) -o client obj/client.o obj/socket_handler.o
+client: obj/client.o $(COMMON_OBJS)
+	$(CC) $(CFLAGS) -o client obj/client.o $(COMMON_OBJS)
 
+<<<<<<< HEAD
 obj/server.o: src/server.c
 	$(CC) $(CFLAGS) -c src/server.c -o obj/server.o
 >>>>>>> 63ffaa6 ([ADD] basico)
@@ -28,6 +31,10 @@ obj/client.o: src/client.c
 
 obj/socket_handler.o: src/socket_handler.c
 	$(CC) $(CFLAGS) -c src/socket_handler.c -o obj/socket_handler.o
+=======
+obj/%.o: src/%.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(LFLAGS)
+>>>>>>> fa95a3d ([ADD] CRC-8 e send_ack e nack (não funcionam ainda))
 
 clean:
 	rm -f server client obj/*.o

@@ -1,4 +1,5 @@
 #include "../header/socket_handler.h"
+#include "../header/common_packets.h"
 
 int main(int argc, char *argv[]) {
     if (argc != 2) {
@@ -8,10 +9,8 @@ int main(int argc, char *argv[]) {
 
     int sockfd = open_raw_socket(argv[1]);
 
-    char *data = "Hello, this is a message from server";
-
-    if (send(sockfd, data, strlen(data)+1, 0) < 0)
-        socket_error("Erro ao enviar dados");
+    if (send_ACK(sockfd) < 0)
+        socket_error("Erro ao enviar ACK");
 
     close(sockfd);
 

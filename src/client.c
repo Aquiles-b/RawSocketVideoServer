@@ -1,4 +1,5 @@
 #include "../header/socket_handler.h"
+#include "../header/common_packets.h"
 
 int main(int argc, char *argv[])
 {
@@ -9,12 +10,21 @@ int main(int argc, char *argv[])
 
     int sockfd = open_raw_socket(argv[1]);
 
-    char data[BUF_SIZE];
+    unsigned char buf[PACKET_MAX_SIZE] = {0};
 
-    if (recv(sockfd, data, BUF_SIZE, 0) < 0)
-        socket_error("Erro ao receber dados");
+    int received = 0;
 
-    printf("%s\n", data);
+    while (!received) {
+        u_short num_bytes = recv(sockfd, buf, PACKET_MAX_SIZE, 0);
+        if (num_bytes < 0) {
+            socket_error("recvfrom");
+        }
+        if (validate_packet(buf, num_bytes)) {
+            received = 1;
+        }
+    }
+
+    printf("ACK recebido");
 
     close(sockfd);
 
