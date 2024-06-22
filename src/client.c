@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 
     int sockfd = open_raw_socket(argv[1]);
 
-    unsigned char buf[PACKET_MAX_SIZE] = {0};
+    char buf[PACKET_MAX_SIZE] = {0};
 
     int received = 0;
 
@@ -20,7 +20,11 @@ int main(int argc, char *argv[])
             socket_error("recvfrom");
         }
         if (validate_packet(buf, num_bytes)) {
+            printf("Pacote válido\n");
             received = 1;
+        } 
+        else {
+            printf("Pacote inválido\n");
         }
     }
 
