@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
 
     int sockfd = open_raw_socket(argv[1]);
 
-    char buf[PACKET_MAX_SIZE] = {0};
+    unsigned char buf[PACKET_MAX_SIZE] = {0};
 
     int received = 0;
 
