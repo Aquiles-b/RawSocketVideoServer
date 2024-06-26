@@ -1,3 +1,6 @@
+#ifndef _SOCKET_HANDLER_H_
+#define _SOCKET_HANDLER_H_
+
 #include <arpa/inet.h>
 #include <net/ethernet.h>
 #include <linux/if_packet.h>
@@ -12,3 +15,5 @@
 void socket_error(const char *msg);
 
 int open_raw_socket(const char *interface);
+
+#endif // _SOCKET_HANDLER_H_

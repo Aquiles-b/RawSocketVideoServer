@@ -11,7 +11,7 @@ server: server.o
 =======
 CFLAGS = -Wall -g
 
-COMMON_OBJS = obj/socket_handler.o obj/common_packets.o
+COMMON_OBJS = obj/socket_handler.o obj/common_packets.o obj/basic_for_packets.o
 
 all: server client
 
