@@ -22,6 +22,7 @@ client: obj/client.o $(COMMON_OBJS)
 	$(CC) $(CFLAGS) -o client obj/client.o $(COMMON_OBJS)
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 obj/server.o: src/server.c
 	$(CC) $(CFLAGS) -c src/server.c -o obj/server.o
 >>>>>>> 63ffaa6 ([ADD] basico)
@@ -33,6 +34,15 @@ obj/socket_handler.o: src/socket_handler.c
 	$(CC) $(CFLAGS) -c src/socket_handler.c -o obj/socket_handler.o
 =======
 obj/%.o: src/%.c
+=======
+obj/server.o: src/server.c 
+	$(CC) $(CFLAGS) -c $< -o $@ $(LFLAGS)
+
+obj/client.o: src/client.c
+	$(CC) $(CFLAGS) -c $< -o $@ $(LFLAGS)
+
+obj/%.o: src/%.c header/%.h
+>>>>>>> 6c02a62 ([FIX] validação dos pacotes e makefile)
 	$(CC) $(CFLAGS) -c $< -o $@ $(LFLAGS)
 >>>>>>> fa95a3d ([ADD] CRC-8 e send_ack e nack (não funcionam ainda))
 

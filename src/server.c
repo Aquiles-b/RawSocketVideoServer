@@ -13,7 +13,6 @@ char **list_files_in_dir(char *dir_path) {
     dir = opendir(dir_path);
 
     if (dir == NULL) {
-        perror("Erro ao abrir o diretório");
         return NULL;
     }
 
@@ -41,10 +40,9 @@ int main(int argc, char *argv[]) {
 
     char **movies = list_files_in_dir("movies");
 
-    unsigned int i = 0;
-    while (movies[i] != NULL) {
-        printf("%s\n", movies[i]);
-        i++;
+    if (send_NACK(sockfd) == -1) {
+        fprintf(stderr, "Erro ao enviar ACK.\n");
+        return 1;
     }
 
     free(movies);

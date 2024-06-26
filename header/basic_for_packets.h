@@ -13,8 +13,8 @@
 #define NACK_COD 0x01
 
 /* CRC-8 pre calculados */
-#define ACK_CRC 0x00
-#define NACK_CRC 0x10
+#define ACK_CRC 0x2d
+#define NACK_CRC 0x3d
 
 /* Retorna 1 se for valido e 0 se nao for. */
 unsigned char calc_crc_8(unsigned char *data, const short size);
