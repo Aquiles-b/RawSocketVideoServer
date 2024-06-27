@@ -26,6 +26,7 @@ short validate_crc_8(unsigned char *data, const short size) {
 /* Retorna o tamanho real do pacote se for valido e 0 se nao for. */
 short validate_packet(unsigned char *data, const short size) {
     if ((size < PACKET_MIN_SIZE) || (data[0] != 0x7e)) {
+        printf("Size: %d   ou data != \n", size);
         return 0;
     }
     short tam_packet = 0;
@@ -35,6 +36,7 @@ short validate_packet(unsigned char *data, const short size) {
     if (validate_crc_8(data, tam_packet)) {
         return tam_packet;
     }
+    printf("CRC error\n");
     return 0;
 }
 
@@ -55,7 +57,7 @@ unsigned char **segment_data_in_packets(unsigned char *data,
         last_packet_size = max_size_data;
     }
 
-    unsigned char **packets = malloc(sizeof(unsigned char *) * num_packets + 1);
+    unsigned char **packets = malloc(sizeof(unsigned char *) * (num_packets + 1));
     unsigned char sequence = 0;
     unsigned long int i = 0;
 
@@ -64,12 +66,12 @@ unsigned char **segment_data_in_packets(unsigned char *data,
         packets[i][0] = 0x7e;
         packets[i][1] = (max_size_data << 2) | (sequence >> 3);
         packets[i][2] = (sequence << 5) | DATA_COD;
-        memcpy(packets[i] + 3, data + i, max_size_data);
+        memcpy(packets[i] + 3, data, max_size_data);
         data += max_size_data;
         ++sequence;
         packets[i][PACKET_MAX_SIZE - 1] = calc_crc_8(packets[i] + 1, PACKET_MAX_SIZE - 2);
     }
-    packets[i] = malloc(sizeof(unsigned char) * last_packet_size + 4);
+    packets[i] = malloc(sizeof(unsigned char) * (last_packet_size + 4));
     packets[i][0] = 0x7e;
     packets[i][1] = ((last_packet_size << 2) | (sequence >> 3));
     packets[i][2] = (sequence << 5) | END_DATA_COD;

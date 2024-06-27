@@ -11,20 +11,36 @@ void recv_file(int sockfd) {
     }
 
     short n = 0;
+    int (*send)(int) = send_ACK;
+    int i = 0;
+
+    send_ACK(sockfd);
 
     while (1) {
-        n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0);
+        if ((n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0) == -1)) {
+            printf("Timeout em %d\n", i);
+            send(sockfd);
+            continue;
+        }
 
         n = validate_packet(buffer, n);
 
-        // Logica de comunicação aqui
+        if (!n) {
+            printf("Pacote %d invalido. Mandando NACK\n", i);
+            send_NACK(sockfd);
+            send = send_NACK;
+            continue;
+        }
 
         fwrite(buffer + 3, 1, n - 4, file);
+        printf("Recebido\n");
 
         if ( (buffer[2] & 0x1f) == END_DATA_COD) {
             break;
         }
+        i++;
         send_ACK(sockfd);
+        send = send_ACK;
     }
 
 }

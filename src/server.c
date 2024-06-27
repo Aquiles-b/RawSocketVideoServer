@@ -54,25 +54,57 @@ void send_file(int sockfd, char *file_name) {
     unsigned char *buffer = malloc(sizeof(unsigned char) * 67);
 
     unsigned long int i = 0;
+    int n = 0;
+
+    printf("Esperando ACK para comecar...\n");
     while (1) {
+        if ((n = recv(sockfd, buffer, 67, 0)) == -1) {
+            fprintf(stderr, "Erro no recv\n");
+            exit(1);
+        }
+        n = validate_packet(buffer, n);
+        if (n <= 0) {
+            continue;
+        }
+        if ((buffer[2] & 0x1f) == ACK_COD) {
+            break;
+        }
+    }
+
+    printf("Comecando...\n");
+    while (1) {
+        printf("Mandando pacote %ld\n", i);
         if (send_packet(sockfd, packets[i]) == -1) {
             fprintf(stderr, "Erro ao enviar pacote %lu\n", i);
             exit(1);
         }
-        int n = 0;
+
         if (packets[i+1] == NULL) {
             break;
         }
 
+        printf("Esperando pacote...\n");
         if ((n = recv(sockfd, buffer, 67, 0)) == -1) {
-            fprintf(stderr, "Erro ao receber pacote de confirmação\n");
+            fprintf(stderr, "Erro no recv\n");
             exit(1);
         }
-
-        // Logica de comunicação aqui
-
         n = validate_packet(buffer, n);
-        i++;
+        while (n <= 0) {
+            printf("Esperando confirmacao\n");
+            if ((n = recv(sockfd, buffer, 67, 0)) == -1) {
+                fprintf(stderr, "Erro no recv\n");
+                continue;
+            }
+            n = validate_packet(buffer, n);
+        }
+
+        if ((buffer[2] & 0x1f) == ACK_COD) {
+            printf("Ack recebido\n");
+            i++;
+        } 
+        else {
+            printf("Nack recebido\n");
+        }
     }
 
     free(data);
