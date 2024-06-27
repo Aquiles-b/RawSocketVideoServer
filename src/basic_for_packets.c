@@ -1,4 +1,6 @@
 #include "../header/basic_for_packets.h"
+#include <stdio.h>
+
 
 unsigned char calc_crc_8(unsigned char *data, const short size) {
     unsigned char crc = 0;
@@ -35,3 +37,60 @@ short validate_packet(unsigned char *data, const short size) {
     }
     return 0;
 }
+
+unsigned char **segment_data_in_packets(unsigned char *data, 
+                                        const unsigned long int size) {
+    if (size == 0) {
+        return NULL;
+    }
+
+    unsigned long int num_packets = size / PACKET_MAX_SIZE;
+    unsigned short last_packet_size = size % PACKET_MAX_SIZE;
+    unsigned short max_size_data = PACKET_MAX_SIZE - 4;
+
+    if (last_packet_size != 0) {
+        ++num_packets;
+    } 
+    else {
+        last_packet_size = max_size_data;
+    }
+
+    unsigned char **packets = malloc(sizeof(unsigned char *) * num_packets + 1);
+    unsigned char sequence = 0;
+    unsigned long int i = 0;
+
+    for (; i < num_packets - 1; i++) {
+        packets[i] = malloc(sizeof(unsigned char) * PACKET_MAX_SIZE);
+        packets[i][0] = 0x7e;
+        packets[i][1] = (max_size_data << 2) | (sequence >> 3);
+        packets[i][2] = (sequence << 5) | DATA_COD;
+        memcpy(packets[i] + 3, data + i, max_size_data);
+        data += max_size_data;
+        ++sequence;
+        packets[i][PACKET_MAX_SIZE - 1] = calc_crc_8(packets[i] + 1, PACKET_MAX_SIZE - 2);
+    }
+    packets[i] = malloc(sizeof(unsigned char) * last_packet_size + 4);
+    packets[i][0] = 0x7e;
+    packets[i][1] = ((last_packet_size << 2) | (sequence >> 3));
+    packets[i][2] = (sequence << 5) | END_DATA_COD;
+    memcpy(packets[i] + 3, data, last_packet_size);
+    packets[i][last_packet_size + 3] = calc_crc_8(packets[i] + 1, last_packet_size + 2);
+
+    packets[num_packets] = NULL;
+
+    return packets;
+}
+
+void free_packets(unsigned char ***packets) {
+    for (unsigned long int i = 0; (*packets)[i] != NULL; i++) {
+        free((*packets)[i]);
+    }
+    free(*packets);
+}
+
+short send_packet(int sockfd, unsigned char *packet) {
+    short tam_packet = packet[1] >> 2;
+    tam_packet += 4;
+    return send(sockfd, packet, tam_packet, 0);
+}
+
