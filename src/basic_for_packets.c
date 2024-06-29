@@ -26,7 +26,6 @@ short validate_crc_8(unsigned char *data, const short size) {
 /* Retorna o tamanho real do pacote se for valido e 0 se nao for. */
 short validate_packet(unsigned char *data, const short size) {
     if ((size < PACKET_MIN_SIZE) || (data[0] != 0x7e)) {
-        printf("Size: %d   ou data != \n", size);
         return 0;
     }
     short tam_packet = 0;
@@ -36,7 +35,6 @@ short validate_packet(unsigned char *data, const short size) {
     if (validate_crc_8(data, tam_packet)) {
         return tam_packet;
     }
-    printf("CRC error\n");
     return 0;
 }
 
@@ -46,9 +44,9 @@ unsigned char **segment_data_in_packets(unsigned char *data,
         return NULL;
     }
 
-    unsigned long int num_packets = size / PACKET_MAX_SIZE;
-    unsigned short last_packet_size = size % PACKET_MAX_SIZE;
     unsigned short max_size_data = PACKET_MAX_SIZE - 4;
+    unsigned long int num_packets = size / max_size_data;
+    unsigned short last_packet_size = size % max_size_data;
 
     if (last_packet_size != 0) {
         ++num_packets;
@@ -62,17 +60,18 @@ unsigned char **segment_data_in_packets(unsigned char *data,
     unsigned long int i = 0;
 
     for (; i < num_packets - 1; i++) {
-        packets[i] = malloc(sizeof(unsigned char) * PACKET_MAX_SIZE);
-        packets[i][0] = 0x7e;
+        packets[i] = calloc(PACKET_MAX_SIZE, sizeof(unsigned char));
+        packets[i][0] = INIT_MARKER;
         packets[i][1] = (max_size_data << 2) | (sequence >> 3);
         packets[i][2] = (sequence << 5) | DATA_COD;
         memcpy(packets[i] + 3, data, max_size_data);
         data += max_size_data;
         ++sequence;
+        sequence &= 0x1f;
         packets[i][PACKET_MAX_SIZE - 1] = calc_crc_8(packets[i] + 1, PACKET_MAX_SIZE - 2);
     }
-    packets[i] = malloc(sizeof(unsigned char) * (last_packet_size + 4));
-    packets[i][0] = 0x7e;
+    packets[i] = calloc(PACKET_MAX_SIZE, sizeof(unsigned char));
+    packets[i][0] = INIT_MARKER;
     packets[i][1] = ((last_packet_size << 2) | (sequence >> 3));
     packets[i][2] = (sequence << 5) | END_DATA_COD;
     memcpy(packets[i] + 3, data, last_packet_size);

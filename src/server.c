@@ -50,61 +50,30 @@ void send_file(int sockfd, char *file_name) {
     fread(data, 1, file_size, file);
 
     unsigned char **packets = segment_data_in_packets(data, file_size);
-
     unsigned char *buffer = malloc(sizeof(unsigned char) * 67);
-
     unsigned long int i = 0;
     int n = 0;
 
-    printf("Esperando ACK para comecar...\n");
     while (1) {
-        if ((n = recv(sockfd, buffer, 67, 0)) == -1) {
-            fprintf(stderr, "Erro no recv\n");
-            exit(1);
-        }
-        n = validate_packet(buffer, n);
-        if (n <= 0) {
-            continue;
-        }
-        if ((buffer[2] & 0x1f) == ACK_COD) {
+        if (packets[i] == NULL) {
             break;
         }
-    }
 
-    printf("Comecando...\n");
-    while (1) {
-        printf("Mandando pacote %ld\n", i);
         if (send_packet(sockfd, packets[i]) == -1) {
             fprintf(stderr, "Erro ao enviar pacote %lu\n", i);
             exit(1);
         }
 
-        if (packets[i+1] == NULL) {
-            break;
+        n = recv(sockfd, buffer, 67, 0);
+        if (n == -1) {
+            continue;
         }
 
-        printf("Esperando pacote...\n");
-        if ((n = recv(sockfd, buffer, 67, 0)) == -1) {
-            fprintf(stderr, "Erro no recv\n");
-            exit(1);
-        }
         n = validate_packet(buffer, n);
-        while (n <= 0) {
-            printf("Esperando confirmacao\n");
-            if ((n = recv(sockfd, buffer, 67, 0)) == -1) {
-                fprintf(stderr, "Erro no recv\n");
-                continue;
-            }
-            n = validate_packet(buffer, n);
-        }
 
-        if ((buffer[2] & 0x1f) == ACK_COD) {
-            printf("Ack recebido\n");
+        if (n && ((buffer[2] & 0x1f) == ACK_COD)) {
             i++;
         } 
-        else {
-            printf("Nack recebido\n");
-        }
     }
 
     free(data);
@@ -120,7 +89,7 @@ int main(int argc, char *argv[]) {
 
     int sockfd = open_raw_socket(argv[1]);
 
-    send_file(sockfd, "./movies/Untitled.mp4");
+    send_file(sockfd, "./movies/kung_fu.mp4");
 
     close(sockfd);
 

@@ -11,36 +11,61 @@ void recv_file(int sockfd) {
     }
 
     short n = 0;
-    int (*send)(int) = send_ACK;
-    int i = 0;
+    unsigned char last_seq = 0, seq = 0;
 
-    send_ACK(sockfd);
-
+    // Primeiro pacote
     while (1) {
-        if ((n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0) == -1)) {
-            printf("Timeout em %d\n", i);
-            send(sockfd);
+        if ((n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0)) == -1) {
             continue;
         }
 
         n = validate_packet(buffer, n);
-
         if (!n) {
-            printf("Pacote %d invalido. Mandando NACK\n", i);
             send_NACK(sockfd);
-            send = send_NACK;
             continue;
         }
 
-        fwrite(buffer + 3, 1, n - 4, file);
-        printf("Recebido\n");
+        seq = ((buffer[1] & 0x03) << 3) | (buffer[2] >> 5);
 
+        fwrite(buffer + 3, 1, n - 4, file);
+
+        send_ACK(sockfd);
+        if ((buffer[2] & 0x1f) == END_DATA_COD) {
+            fclose(file);
+            return;
+        }
+        break;
+    }
+    last_seq = seq;
+
+    // Restante
+    while (1) {
+        n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0);
+        if (n == -1) {
+            continue;
+        }
+
+        n = validate_packet(buffer, n);
+        if (!n) {
+            send_NACK(sockfd);
+            continue;
+        }
+
+        seq = ((buffer[1] & 0x03) << 3) | (buffer[2] >> 5);
+
+        if (seq == last_seq) {
+            send_ACK(sockfd);
+            continue;
+        }
+
+        last_seq = seq;
+
+        fwrite(buffer + 3, 1, n - 4, file);
+
+        send_ACK(sockfd);
         if ( (buffer[2] & 0x1f) == END_DATA_COD) {
             break;
         }
-        i++;
-        send_ACK(sockfd);
-        send = send_ACK;
     }
 
 }

@@ -4,7 +4,7 @@
 #define CRC_8_POLY 0xb
 
 #define PACKET_MAX_SIZE 67
-#define PACKET_MIN_SIZE 14
+#define PACKET_MIN_SIZE 64
 
 #define INIT_MARKER 0x7e
 
