@@ -38,4 +38,6 @@ void free_packets(unsigned char ***packets);
 
 short send_packet(int sockfd, unsigned char *packet);
 
+void clear_socket_buffer(int sockfd);
+
 #endif // _BASE_PACKETS_H_

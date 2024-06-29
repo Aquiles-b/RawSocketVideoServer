@@ -29,8 +29,7 @@ short validate_packet(unsigned char *data, const short size) {
         return 0;
     }
     short tam_packet = 0;
-    tam_packet = data[1] >> 2;
-    tam_packet += 4;
+    tam_packet = (data[1] >> 2) == 63 ? PACKET_MAX_SIZE : PACKET_MIN_SIZE;
 
     if (validate_crc_8(data, tam_packet)) {
         return tam_packet;
@@ -90,8 +89,11 @@ void free_packets(unsigned char ***packets) {
 }
 
 short send_packet(int sockfd, unsigned char *packet) {
-    short tam_packet = packet[1] >> 2;
-    tam_packet += 4;
+    short tam_packet = (packet[1] >> 2) == 63 ? PACKET_MAX_SIZE : PACKET_MIN_SIZE;
     return send(sockfd, packet, tam_packet, 0);
 }
 
+void clear_socket_buffer(int sockfd) {
+    unsigned char buffer[PACKET_MAX_SIZE] = {0};
+    while (recv(sockfd, buffer, PACKET_MAX_SIZE, MSG_DONTWAIT) != -1);
+}

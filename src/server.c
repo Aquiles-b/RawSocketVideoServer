@@ -50,7 +50,7 @@ void send_file(int sockfd, char *file_name) {
     fread(data, 1, file_size, file);
 
     unsigned char **packets = segment_data_in_packets(data, file_size);
-    unsigned char *buffer = malloc(sizeof(unsigned char) * 67);
+    unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_MAX_SIZE);
     unsigned long int i = 0;
     int n = 0;
 
@@ -60,11 +60,11 @@ void send_file(int sockfd, char *file_name) {
         }
 
         if (send_packet(sockfd, packets[i]) == -1) {
-            fprintf(stderr, "Erro ao enviar pacote %lu\n", i);
-            exit(1);
+            continue;
         }
 
-        n = recv(sockfd, buffer, 67, 0);
+        clear_socket_buffer(sockfd);
+        n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0);
         if (n == -1) {
             continue;
         }
@@ -76,20 +76,22 @@ void send_file(int sockfd, char *file_name) {
         } 
     }
 
+    printf("Enviados %ld pacotes\n", i);
+
     free(data);
     free_packets(&packets);
     fclose(file);
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 2) {
-        fprintf(stderr, "Uso: %s <interface>\n", argv[0]);
+    if (argc != 3) {
+        fprintf(stderr, "Uso: %s <interface> <file>\n", argv[0]);
         return 1;
     }
 
     int sockfd = open_raw_socket(argv[1]);
 
-    send_file(sockfd, "./movies/kung_fu.mp4");
+    send_file(sockfd, argv[2]);
 
     close(sockfd);
 

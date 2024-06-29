@@ -10,7 +10,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define TIME_OUT_SECONDS 1
+#define TIME_OUT_MSECONDS 50
 
 void socket_error(const char *msg);
 

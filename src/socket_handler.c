@@ -24,7 +24,7 @@ int open_raw_socket(const char *interface) {
     mr.mr_ifindex = ifindex;
     mr.mr_type = PACKET_MR_PROMISC;
 
-    struct timeval timeout = { .tv_sec = TIME_OUT_SECONDS, .tv_usec = 0};
+    struct timeval timeout = { .tv_sec = 0, .tv_usec = TIME_OUT_MSECONDS};
 
     // Não joga fora o que identifica como lixo: Modo promíscuo
     if (setsockopt(sockfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mr, sizeof(mr)) == -1)

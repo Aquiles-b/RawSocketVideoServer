@@ -11,36 +11,14 @@ void recv_file(int sockfd) {
     }
 
     short n = 0;
-    unsigned char last_seq = 0, seq = 0;
+    unsigned char last_seq = 0, seq = 0, cod = 0;
+    unsigned long int num_packets = 0;
+    unsigned short tam_data = 0;
 
-    // Primeiro pacote
     while (1) {
-        if ((n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0)) == -1) {
-            continue;
-        }
-
-        n = validate_packet(buffer, n);
-        if (!n) {
-            send_NACK(sockfd);
-            continue;
-        }
-
-        seq = ((buffer[1] & 0x03) << 3) | (buffer[2] >> 5);
-
-        fwrite(buffer + 3, 1, n - 4, file);
-
-        send_ACK(sockfd);
-        if ((buffer[2] & 0x1f) == END_DATA_COD) {
-            fclose(file);
-            return;
-        }
-        break;
-    }
-    last_seq = seq;
-
-    // Restante
-    while (1) {
+        clear_socket_buffer(sockfd);
         n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0);
+        clear_socket_buffer(sockfd);
         if (n == -1) {
             continue;
         }
@@ -52,21 +30,29 @@ void recv_file(int sockfd) {
         }
 
         seq = ((buffer[1] & 0x03) << 3) | (buffer[2] >> 5);
+        cod = buffer[2] & 0x1f;
 
-        if (seq == last_seq) {
-            send_ACK(sockfd);
+        if ((cod != DATA_COD) && (cod != END_DATA_COD)) {
             continue;
         }
 
+        if ((seq == last_seq) && (num_packets != 0)) {
+            send_ACK(sockfd);
+            continue;
+        }
         last_seq = seq;
 
-        fwrite(buffer + 3, 1, n - 4, file);
-
         send_ACK(sockfd);
-        if ( (buffer[2] & 0x1f) == END_DATA_COD) {
+
+        tam_data = (buffer[1] >> 2);
+        fwrite(buffer + 3, 1, tam_data, file);
+        num_packets++;
+
+        if (cod == END_DATA_COD) {
             break;
         }
     }
+    printf("Recebidos %ld pacotes\n", num_packets);
 
 }
 
