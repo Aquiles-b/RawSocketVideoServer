@@ -33,5 +33,9 @@ int open_raw_socket(const char *interface) {
     if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char *) &timeout, sizeof(timeout)) == -1)
         socket_error("Erro ao fazer setsockopt para timeout");
 
+    int socket_buffer_size = 67;
+    if (setsockopt(sockfd, SOL_SOCKET, SO_RCVBUF, &socket_buffer_size, sizeof(socket_buffer_size)) == -1)
+        socket_error("Erro ao fazer setsockopt para buffer do socket");
+
     return sockfd;
 }

@@ -3,29 +3,31 @@
 #include "../header/common_packets.h"
 
 void recv_file(int sockfd) {
-    unsigned char buffer[PACKET_MAX_SIZE] = {0};
     FILE *file = fopen("received_file.mp4", "wb");
     if (file == NULL) {
         fprintf(stderr, "Erro ao abrir o arquivo\n");
         return;
     }
 
+    unsigned char buffer[PACKET_SIZE] = {0};
     short n = 0;
-    unsigned char last_seq = 0, seq = 0, cod = 0;
+    unsigned char last_seq = -1, seq = 0, cod = 0;
     unsigned long int num_packets = 0;
     unsigned short tam_data = 0;
 
+    send_ACK(sockfd, 0);
+    clear_socket_buffer(sockfd);
+
     while (1) {
-        clear_socket_buffer(sockfd);
-        n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0);
-        clear_socket_buffer(sockfd);
+        n = recv(sockfd, buffer, PACKET_SIZE, 0);
+
         if (n == -1) {
             continue;
         }
 
         n = validate_packet(buffer, n);
         if (!n) {
-            send_NACK(sockfd);
+            send_NACK(sockfd, seq);
             continue;
         }
 
@@ -33,18 +35,20 @@ void recv_file(int sockfd) {
         cod = buffer[2] & 0x1f;
 
         if ((cod != DATA_COD) && (cod != END_DATA_COD)) {
+            send_NACK(sockfd, seq);
             continue;
         }
 
-        if ((seq == last_seq) && (num_packets != 0)) {
-            send_ACK(sockfd);
+        if (seq == last_seq) {
+            send_ACK(sockfd, seq);
             continue;
         }
         last_seq = seq;
 
-        send_ACK(sockfd);
+        send_ACK(sockfd, seq);
 
         tam_data = (buffer[1] >> 2);
+
         fwrite(buffer + 3, 1, tam_data, file);
         num_packets++;
 

@@ -50,9 +50,18 @@ void send_file(int sockfd, char *file_name) {
     fread(data, 1, file_size, file);
 
     unsigned char **packets = segment_data_in_packets(data, file_size);
-    unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_MAX_SIZE);
+    unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_SIZE);
     unsigned long int i = 0;
     int n = 0;
+    unsigned char seq = 0, seq_ack = 0;
+
+    while (1) {
+        n = recv(sockfd, buffer, PACKET_SIZE, 0);
+        if (validate_packet(buffer, n)) {
+            break;
+        }
+    }
+    clear_socket_buffer(sockfd);
 
     while (1) {
         if (packets[i] == NULL) {
@@ -63,16 +72,21 @@ void send_file(int sockfd, char *file_name) {
             continue;
         }
 
-        clear_socket_buffer(sockfd);
-        n = recv(sockfd, buffer, PACKET_MAX_SIZE, 0);
+        n = recv(sockfd, buffer, PACKET_SIZE, 0);
+
         if (n == -1) {
             continue;
         }
 
         n = validate_packet(buffer, n);
 
+        seq = ((packets[i][1] & 0x03) << 3) | (packets[i][2] >> 5);
+
         if (n && ((buffer[2] & 0x1f) == ACK_COD)) {
-            i++;
+            seq_ack = ((buffer[1] & 0x03) << 3) | (buffer[2] >> 5);
+            if (seq == seq_ack) {
+                i++;
+            }
         } 
     }
 

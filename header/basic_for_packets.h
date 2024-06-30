@@ -3,8 +3,7 @@
 
 #define CRC_8_POLY 0xb
 
-#define PACKET_MAX_SIZE 67
-#define PACKET_MIN_SIZE 64
+#define PACKET_SIZE 67
 
 #define INIT_MARKER 0x7e
 
@@ -22,21 +21,19 @@
 #include <string.h>
 #include <sys/socket.h>
 
-unsigned char calc_crc_8(unsigned char *data, const short size);
+unsigned char calc_crc_8(const unsigned char *data, const short size);
 
 /* Retorna 1 se for valido e 0 se nao for. */
-short validate_crc_8(unsigned char *data, const short size);
+short validate_crc_8(const unsigned char *data, const short size);
 
 /* Retorna o tamanho real do pacote se for valido e 0 se nao for. */
-short validate_packet(unsigned char *data, const short size);
+short validate_packet(const unsigned char *data, const short size);
 
 /* (Faz alocacao de memoria). A ultima posicao do vetor eh NULL. */
 unsigned char **segment_data_in_packets(unsigned char *data, 
                                         const unsigned long int size);
 
 void free_packets(unsigned char ***packets);
-
-short send_packet(int sockfd, unsigned char *packet);
 
 void clear_socket_buffer(int sockfd);
 
