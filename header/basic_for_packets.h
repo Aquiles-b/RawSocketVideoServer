@@ -29,6 +29,10 @@ int validate_crc_8(const unsigned char *data, const short size);
 /* Retorna 1 se for valido e 0 se nao for. */
 int validate_packet(const unsigned char *data, const short size);
 
+/* (Aloca memoria). Retorna NULL em caso de falha */
+unsigned char *create_packet(const unsigned char *data, unsigned short size_data,
+                        unsigned char seq, unsigned char code);
+
 /* (Aloca memoria). A ultima posicao do vetor eh NULL. */
 unsigned char **segment_data_in_packets(unsigned char *data, 
                                         const unsigned long int size, 
@@ -36,5 +40,11 @@ unsigned char **segment_data_in_packets(unsigned char *data,
 void free_packets(unsigned char ***packets);
 
 void clear_socket_buffer(int sockfd);
+
+unsigned char get_packet_code(const unsigned char *packet);
+
+unsigned char get_packet_seq(const unsigned char *packet);
+
+unsigned short get_packet_data_size(const unsigned char *packet);
 
 #endif // _BASE_PACKETS_H_

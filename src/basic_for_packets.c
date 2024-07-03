@@ -23,10 +23,9 @@ int validate_crc_8(const unsigned char *data, const short size) {
 
 /* Retorna 1 se for valido e 0 se nao for. */
 int validate_packet(const unsigned char *data, const short size) {
-    if ((size < PACKET_SIZE) || (data[0] != 0x7e)) {
+    if ((size < PACKET_SIZE) || (data[0] != INIT_MARKER)) {
         return 0;
     }
-
     if (validate_crc_8(data, size)) {
         return 1;
     }
@@ -36,6 +35,9 @@ int validate_packet(const unsigned char *data, const short size) {
 unsigned char *create_packet(const unsigned char *data, unsigned short size_data,
                         unsigned char seq, unsigned char code) {
     unsigned char *packet = calloc(PACKET_SIZE, sizeof(unsigned char));
+    if (packet == NULL) {
+        return NULL;
+    }
     packet[0] = INIT_MARKER;
     packet[1] = (size_data << 2) | (seq >> 3);
     packet[2] = (seq << 5) | code;
@@ -92,4 +94,16 @@ void free_packets(unsigned char ***packets) {
 void clear_socket_buffer(int sockfd) {
     unsigned char buffer[PACKET_SIZE] = {0};
     while (recv(sockfd, buffer, PACKET_SIZE, MSG_DONTWAIT) != -1);
+}
+
+unsigned char get_packet_code(const unsigned char *packet) {
+    return packet[2] & 0x1f;
+}
+
+unsigned char get_packet_seq(const unsigned char *packet) {
+    return ((packet[1] & 0x03) << 3) | (packet[2] >> 5);
+}
+
+unsigned short get_packet_data_size(const unsigned char *packet) {
+    return packet[1] >> 2;
 }

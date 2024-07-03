@@ -13,9 +13,6 @@ int recv_file(int sockfd, char *filename) {
     unsigned long int num_packets = 0;
     unsigned short tam_data = 0;
 
-    send_ACK(sockfd, 0);
-    clear_socket_buffer(sockfd);
-
     while (1) {
         n = recv(sockfd, buffer, PACKET_SIZE, 0);
 
@@ -29,8 +26,8 @@ int recv_file(int sockfd, char *filename) {
             continue;
         }
 
-        seq = ((buffer[1] & 0x03) << 3) | (buffer[2] >> 5);
-        cod = buffer[2] & 0x1f;
+        seq = get_packet_seq(buffer);
+        cod = get_packet_code(buffer);
 
         if ((cod != DATA_COD) && (cod != END_DATA_COD)) {
             send_NACK(sockfd, seq);
@@ -45,7 +42,7 @@ int recv_file(int sockfd, char *filename) {
 
         send_ACK(sockfd, seq);
 
-        tam_data = (buffer[1] >> 2);
+        tam_data = get_packet_data_size(buffer);
 
         fwrite(buffer + 3, 1, tam_data, file);
         num_packets++;

@@ -64,7 +64,6 @@ int send_seg_packets(unsigned char **packets, int sockfd) {
     short n = 0;
 
     while (packets[i]) {
-
         if (send_packet(sockfd, packets[i]) == -1) {
             continue;
         }
@@ -77,10 +76,10 @@ int send_seg_packets(unsigned char **packets, int sockfd) {
 
         n = validate_packet(buffer, n);
 
-        seq = ((packets[i][1] & 0x03) << 3) | (packets[i][2] >> 5);
+        seq = get_packet_seq(packets[i]);
 
-        if (n && ((buffer[2] & 0x1f) == ACK_COD)) {
-            seq_ack = ((buffer[1] & 0x03) << 3) | (buffer[2] >> 5);
+        if (n && (get_packet_code(buffer) == ACK_COD)) {
+            seq_ack = get_packet_seq(buffer);
             if (seq == seq_ack) {
                 i++;
             }
@@ -98,6 +97,9 @@ int send_file(int sockfd, char *file_name) {
 
     unsigned char *buffer_data = malloc(sizeof(unsigned char) * DATA_SIZE);
     unsigned long int file_size = get_file_size(file_name);
+    if (file_size == 0) {
+        return 0;
+    }
     unsigned long int num_bytes_read = 0;
     unsigned long int num_segs = file_size / DATA_SIZE;
 
@@ -105,7 +107,7 @@ int send_file(int sockfd, char *file_name) {
         num_segs++;
     }
 
-    while(num_segs != 1) {
+    while(num_segs > 1) {
         num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
         unsigned char **packets = segment_data_in_packets(buffer_data, num_bytes_read, DATA_COD);
         send_seg_packets(packets, sockfd);
