@@ -24,35 +24,31 @@ unsigned long int get_file_size(const char *file_path) {
     }
 }
 
-/* (Aloca memoria) Retorna um vetor de nomes de arquivos no diretorio.
- * O ultimo elemento da lista eh NULL. */
-char **list_files_in_dir(char *dir_path) {
+/* (Aloca memoria) Adiciona um vetor de nomes de arquivos em movies. */
+void list_files_in_dir(char *dir_path, movies_t *movies) {
     DIR *dir;
     struct dirent *entry;
 
     if (!(dir = opendir(dir_path))) {
-        return NULL;
+        return;
     }
 
     unsigned int i = 0;
-    unsigned int num_files = get_num_files_dir(dir);
+    unsigned long int num_files = get_num_files_dir(dir);
+    movies->num_movies = num_files;
 
-    char **movies = malloc(sizeof(char *) * (num_files + 1));
+    movies->movies = malloc(sizeof(char *) * num_files);
 
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_REG) {
-            movies[i] = entry->d_name;
+            movies->movies[i] = entry->d_name;
             i++;
         }
     }
-    movies[i] = NULL;
-
     closedir(dir);
-
-    return movies;
 }
 
-int send_movies_list(int sockfd, char **movies) {
+int send_movies_list(int sockfd, movies_t *movies) {
     return 1;
 }
 
@@ -123,4 +119,8 @@ int send_file(int sockfd, char *file_name) {
     free(buffer_data);
 
     return 1;
+}
+
+unsigned long int get_file_index(const unsigned char *packet) {
+    return *((unsigned long int *) (packet + 3));
 }

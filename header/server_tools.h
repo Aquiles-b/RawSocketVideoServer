@@ -10,15 +10,19 @@
 #include "../header/common_packets.h"
 #include "../header/basic_for_packets.h"
 
+typedef struct movies {
+    char **movies;
+    unsigned long int num_movies;
+} movies_t;
+
 #define DATA_SIZE 63000 
 
 unsigned int get_num_files_dir(DIR *dir);
 
 unsigned long int get_file_size(const char *file_path);
 
-/* (Aloca memoria) Retorna um vetor de nomes de arquivos no diretorio.
- * O ultimo elemento da lista eh NULL. */
-char **list_files_in_dir(char *dir_path);
+/* (Aloca memoria) Adiciona um vetor de nomes de arquivos em movies. */
+void list_files_in_dir(char *dir_path, movies_t *movies);
 
 /* Retorna 1 se o envio foi bem sucedido e 0 se nao foi. */
 int send_movies_list(int sockfd, char **movies);
@@ -28,5 +32,7 @@ int send_seg_packets(unsigned char **packets, int sockfd);
 
 /* Retorna 1 se o arquivo foi enviado com sucesso e 0 se nao foi. */
 int send_file(int sockfd, char *file_name);
+
+unsigned long int get_file_index(const unsigned char *packet);
 
 #endif // _SERVER_TOOLS_H

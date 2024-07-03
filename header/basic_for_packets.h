@@ -12,6 +12,11 @@
 #define NACK_COD 0x01
 #define DATA_COD 0x12
 #define END_DATA_COD 0x1e
+#define LIST_FILES_COD 0x0a
+#define DOWNLOAD_FILE_COD 0x0b
+#define SHOW_IN_SCREEN_COD 0x10
+#define FILE_DESC_COD 0x11
+#define ERROR_COD 0x1f
 
 /* CRC-8 pre calculados */
 #define ACK_CRC 0x2d

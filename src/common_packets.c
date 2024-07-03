@@ -18,6 +18,16 @@ int send_NACK(int sockfd, unsigned char seq) {
     return send(sockfd, nack, PACKET_SIZE, 0);
 }
 
-short send_packet(int sockfd, unsigned char *packet) {
+int send_packet(int sockfd, unsigned char *packet) {
     return send(sockfd, packet, PACKET_SIZE, 0);
+}
+
+int send_error(int sockfd, unsigned char error_code) {
+    unsigned char error_packet[PACKET_SIZE] = {0};
+    error_packet[0] = INIT_MARKER;
+    error_packet[1] = 0;
+    error_packet[2] = ERROR_COD;
+    error_packet[3] = error_code;
+    error_packet[PACKET_SIZE - 1] = calc_crc_8(error_packet + 1, PACKET_SIZE - 2);
+    return send(sockfd, error_packet, PACKET_SIZE, 0);
 }
