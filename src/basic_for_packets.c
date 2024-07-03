@@ -1,5 +1,4 @@
 #include "../header/basic_for_packets.h"
-#include <stdio.h>
 
 unsigned char calc_crc_8(const unsigned char *data, const short size) {
     unsigned char crc = 0;
@@ -17,13 +16,13 @@ unsigned char calc_crc_8(const unsigned char *data, const short size) {
 }
 
 /* Retorna 1 se for valido e 0 se nao for. */
-short validate_crc_8(const unsigned char *data, const short size) {
+int validate_crc_8(const unsigned char *data, const short size) {
     unsigned char crc = calc_crc_8(data + 1, size-2);
     return crc == data[size-1];
 }
 
 /* Retorna 1 se for valido e 0 se nao for. */
-short validate_packet(const unsigned char *data, const short size) {
+int validate_packet(const unsigned char *data, const short size) {
     if ((size < PACKET_SIZE) || (data[0] != 0x7e)) {
         return 0;
     }
@@ -34,8 +33,22 @@ short validate_packet(const unsigned char *data, const short size) {
     return 0;
 }
 
+unsigned char *create_packet(const unsigned char *data, unsigned short size_data,
+                        unsigned char seq, unsigned char code) {
+    unsigned char *packet = calloc(PACKET_SIZE, sizeof(unsigned char));
+    packet[0] = INIT_MARKER;
+    packet[1] = (size_data << 2) | (seq >> 3);
+    packet[2] = (seq << 5) | code;
+    memcpy(packet + 3, data, size_data);
+    packet[PACKET_SIZE - 1] = calc_crc_8(packet + 1, PACKET_SIZE - 2);
+
+    return packet;
+}
+
+/* (Aloca memoria). A ultima posicao do vetor eh NULL. */
 unsigned char **segment_data_in_packets(unsigned char *data, 
-                                        const unsigned long int size) {
+                                        const unsigned long int size, 
+                                        unsigned char last_packet_code) {
     if (size == 0) {
         return NULL;
     }
@@ -56,22 +69,12 @@ unsigned char **segment_data_in_packets(unsigned char *data,
     unsigned long int i = 0;
 
     for (; i < num_packets - 1; i++) {
-        packets[i] = calloc(PACKET_SIZE, sizeof(unsigned char));
-        packets[i][0] = INIT_MARKER;
-        packets[i][1] = (max_size_data << 2) | (sequence >> 3);
-        packets[i][2] = (sequence << 5) | DATA_COD;
-        memcpy(packets[i] + 3, data, max_size_data);
+        packets[i] = create_packet(data, max_size_data, sequence, DATA_COD);
         data += max_size_data;
         ++sequence;
         sequence &= 0x1f;
-        packets[i][PACKET_SIZE - 1] = calc_crc_8(packets[i] + 1, PACKET_SIZE - 2);
     }
-    packets[i] = calloc(PACKET_SIZE, sizeof(unsigned char));
-    packets[i][0] = INIT_MARKER;
-    packets[i][1] = ((last_packet_size << 2) | (sequence >> 3));
-    packets[i][2] = (sequence << 5) | END_DATA_COD;
-    memcpy(packets[i] + 3, data, last_packet_size);
-    packets[i][PACKET_SIZE - 1] = calc_crc_8(packets[i] + 1, PACKET_SIZE - 2);
+    packets[i] = create_packet(data, last_packet_size, sequence, last_packet_code);
 
     packets[num_packets] = NULL;
 
@@ -83,6 +86,7 @@ void free_packets(unsigned char ***packets) {
         free((*packets)[i]);
     }
     free(*packets);
+    *packets = NULL;
 }
 
 void clear_socket_buffer(int sockfd) {

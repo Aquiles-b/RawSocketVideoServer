@@ -24,15 +24,15 @@
 unsigned char calc_crc_8(const unsigned char *data, const short size);
 
 /* Retorna 1 se for valido e 0 se nao for. */
-short validate_crc_8(const unsigned char *data, const short size);
+int validate_crc_8(const unsigned char *data, const short size);
 
-/* Retorna o tamanho real do pacote se for valido e 0 se nao for. */
-short validate_packet(const unsigned char *data, const short size);
+/* Retorna 1 se for valido e 0 se nao for. */
+int validate_packet(const unsigned char *data, const short size);
 
-/* (Faz alocacao de memoria). A ultima posicao do vetor eh NULL. */
+/* (Aloca memoria). A ultima posicao do vetor eh NULL. */
 unsigned char **segment_data_in_packets(unsigned char *data, 
-                                        const unsigned long int size);
-
+                                        const unsigned long int size, 
+                                        unsigned char last_packet_code);
 void free_packets(unsigned char ***packets);
 
 void clear_socket_buffer(int sockfd);
