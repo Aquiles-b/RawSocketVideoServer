@@ -65,7 +65,7 @@ int send_movies_list(int sockfd, movies_t *movies) {
                                           seq , END_DATA_COD);
 
     for (i = 0; i < movies->num_movies; i++) {
-        if (!send_packet_in_timeout(sockfd, packets_movies[i], buffer)) {
+        if (!send_packet_with_confirm(sockfd, packets_movies[i], buffer)) {
             success = 0;
             break;
         }
@@ -173,3 +173,38 @@ unsigned char *create_packet_file_desc(int sockfd, char *file_name){
 
     return create_packet(data, 12, 0, FILE_DESC_COD);
 }
+
+/* Retorna 1 se o descritor do arquivo foi enviado com sucesso e 0 se nao foi. */
+int send_file_desc(int sockfd, char *file_name) {
+    unsigned char *pck_file_desc = create_packet_file_desc(sockfd, file_name);
+    if (pck_file_desc == NULL) {
+        send_error(sockfd, ERROR_ACCESS_DENIED);
+        return 0;
+    }
+    time_t start_time = time(NULL);
+    unsigned char buffer[PACKET_SIZE] = {0};
+    unsigned char client_code = 0;
+    while (1) {
+        if ((time(NULL) - start_time) >= TIMEOUT) {
+            break;
+        }
+        if (send_packet(sockfd, pck_file_desc) == -1) {
+            continue;
+        }
+        if (!recv_packet_in_timeout(sockfd, buffer)) {
+            continue;
+        }
+
+        client_code = get_packet_code(buffer);
+        if (client_code == ACK_COD) {
+            free(pck_file_desc);
+            return 1;
+        }
+        else if (client_code == ERROR_DISK_FULL) {
+            break;
+        }
+    }
+    free(pck_file_desc);
+    return 0;
+}
+

@@ -35,9 +35,12 @@ int send_seg_packets(unsigned char **packets, int sockfd);
 /* Retorna 1 se o arquivo foi enviado com sucesso e 0 se nao foi. */
 int send_file(int sockfd, char *file_name);
 
+unsigned long int get_file_index(const unsigned char *packet);
+
 /* (Aloca memoria) Retorna NULL em caso de falha. */
 unsigned char *create_packet_file_desc(int sockfd, char *file_name);
 
-unsigned long int get_file_index(const unsigned char *packet);
+/* Retorna 1 se o descritor do arquivo foi enviado com sucesso e 0 se nao foi. */
+int send_file_desc(int sockfd, char *file_name);
 
 #endif // _SERVER_TOOLS_H

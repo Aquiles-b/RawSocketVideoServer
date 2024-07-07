@@ -43,7 +43,7 @@ int recv_packet_in_timeout(int sockfd, unsigned char *buffer) {
 }
 
 /* Retorna 1 em caso de sucesso e 0 em falha. */
-int send_packet_in_timeout(int sockfd, unsigned char *packet, unsigned char *buffer) {
+int send_packet_with_confirm(int sockfd, unsigned char *packet, unsigned char *buffer) {
     unsigned char seq = get_packet_seq(packet);
     time_t start_time = time(NULL);
     while (1) {
