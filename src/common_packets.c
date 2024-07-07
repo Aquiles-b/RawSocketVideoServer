@@ -1,4 +1,5 @@
 #include "../header/common_packets.h"
+#include <time.h>
 
 int send_ACK(int sockfd, unsigned char seq) {
     unsigned char ack[PACKET_SIZE] = {0};
@@ -20,6 +21,25 @@ int send_NACK(int sockfd, unsigned char seq) {
 
 int send_packet(int sockfd, unsigned char *packet) {
     return send(sockfd, packet, PACKET_SIZE, 0);
+}
+
+/* Retorna 1 em caso de sucesso e 0 em falha. */
+int recv_packet_in_timeout(int sockfd, unsigned char *buffer) {
+    short num_bytes_read = 0;
+    time_t start_time = time(NULL);
+    while (1) {
+        if ((time(NULL) - start_time) >= TIMEOUT_RECV) {
+            return 0;
+        }
+        if ((num_bytes_read = recv(sockfd, buffer, PACKET_SIZE, 0)) <= 0) {
+            continue;
+        }
+        if (!validate_packet(buffer, num_bytes_read)) {
+            send_NACK(sockfd, 0);
+            continue;
+        }
+        return 1;
+    }
 }
 
 int send_error(int sockfd, unsigned char error_code) {

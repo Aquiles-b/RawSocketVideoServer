@@ -124,3 +124,27 @@ int send_file(int sockfd, char *file_name) {
 unsigned long int get_file_index(const unsigned char *packet) {
     return *((unsigned long int *) (packet + 3));
 }
+
+/* (Aloca memoria) Retorna NULL em caso de falha. */
+unsigned char *create_packet_file_desc(int sockfd, char *file_name){
+    unsigned long int file_size = get_file_size(file_name);
+    struct stat attr;
+    if (stat(file_name, &attr) < 0) {
+        return NULL;
+    }
+    time_t mod_time = attr.st_mtime;
+    struct tm *timeinfo = localtime(&mod_time);
+    unsigned short day, month, year;
+    day = timeinfo->tm_mday;
+    month = timeinfo->tm_mon + 1;
+    year = timeinfo->tm_year + 1900;
+
+    unsigned char data[12] = {0};
+    memcpy(data, &file_size, sizeof(unsigned long int));
+    data[8] = day;
+    data[9] = month;
+    data[10] = year >> 8;
+    data[11] = year;
+
+    return create_packet(data, 12, 0, FILE_DESC_COD);
+}

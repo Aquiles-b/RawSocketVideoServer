@@ -8,7 +8,24 @@ int try_send_file(int sockfd, movies_t *movies, unsigned char *packet) {
         send_error(sockfd, ERROR_NOT_FOUND);
         return 0;
     }
-    send_file_desc(sockfd, movies->movies[file_index]);
+    unsigned char *pck_file_desc = create_packet_file_desc(sockfd, movies->movies[file_index]);
+    if (pck_file_desc == NULL) {
+        send_error(sockfd, ERROR_ACCESS_DENIED);
+        return 0;
+    }
+
+    while(1) {
+        send_packet(sockfd, pck_file_desc);
+        if (!recv_packet_in_timeout(sockfd, packet)) {
+            return 0;
+        }
+        if (get_packet_code(packet) == ACK_COD) {
+            break;
+        }
+        if (get_packet_code(packet) == ERROR_DISK_FULL) {
+            return 0;
+        }
+    }
 
     send_file(sockfd, movies->movies[file_index]);
 
@@ -29,11 +46,7 @@ int main(int argc, char *argv[]) {
 
     int sockfd = open_raw_socket(argv[1]);
     while (1) {
-        if ((num_bytes_read = recv(sockfd, buffer, PACKET_SIZE, 0)) == -1) {
-            continue;
-        }
-        if (!validate_packet(buffer, num_bytes_read)) {
-            send_NACK(sockfd, 0);
+        if (!recv_packet_in_timeout(sockfd, buffer)) {
             continue;
         }
         send_ACK(sockfd, 0);

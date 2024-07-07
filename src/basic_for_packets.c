@@ -32,6 +32,7 @@ int validate_packet(const unsigned char *data, const short size) {
     return 0;
 }
 
+/* (Aloca memoria). Retorna NULL em caso de falha */
 unsigned char *create_packet(const unsigned char *data, unsigned short size_data,
                         unsigned char seq, unsigned char code) {
     unsigned char *packet = calloc(PACKET_SIZE, sizeof(unsigned char));

@@ -6,6 +6,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <time.h>
 
 #include "../header/common_packets.h"
 #include "../header/basic_for_packets.h"
@@ -25,13 +27,16 @@ unsigned long int get_file_size(const char *file_path);
 void list_files_in_dir(char *dir_path, movies_t *movies);
 
 /* Retorna 1 se o envio foi bem sucedido e 0 se nao foi. */
-int send_movies_list(int sockfd, char **movies);
+int send_movies_list(int sockfd, movies_t *movies);
 
 /* Retorna 1 se todos os pacotes foram enviados com sucesso e 0 se nao foram. */
 int send_seg_packets(unsigned char **packets, int sockfd);
 
 /* Retorna 1 se o arquivo foi enviado com sucesso e 0 se nao foi. */
 int send_file(int sockfd, char *file_name);
+
+/* (Aloca memoria) Retorna NULL em caso de falha. */
+unsigned char *create_packet_file_desc(int sockfd, char *file_name);
 
 unsigned long int get_file_index(const unsigned char *packet);
 

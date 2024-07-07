@@ -9,8 +9,9 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <sys/socket.h>
 
-#define TIME_OUT_MSECONDS 50
+#define TIME_OUT_MSECONDS 300
 
 void socket_error(const char *msg);
 
