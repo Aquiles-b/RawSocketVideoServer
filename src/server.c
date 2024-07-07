@@ -35,9 +35,7 @@ int main(int argc, char *argv[]) {
         return 1;
     }
     unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_SIZE);
-    short num_bytes_read = 0;
     unsigned char code = 0;
-    unsigned long int num_movies = 0, file_index = 0;
     movies_t movies_list;
     list_files_in_dir("movies", &movies_list);
 
