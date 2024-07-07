@@ -49,7 +49,36 @@ void list_files_in_dir(char *dir_path, movies_t *movies) {
 }
 
 int send_movies_list(int sockfd, movies_t *movies) {
-    return 1;
+    unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_SIZE);
+    unsigned char **packets_movies = malloc(sizeof(unsigned char *) * movies->num_movies);
+    unsigned char seq = 0;
+    unsigned int i = 0, success = 1;
+
+    for (; i < movies->num_movies - 1; i++) {
+       packets_movies[i] = create_packet((unsigned char *) movies->movies[i], 
+                                              strlen(movies->movies[i]) + 1,
+                                              seq , SHOW_IN_SCREEN_COD);
+        seq++;
+    }
+    packets_movies[i] = create_packet((unsigned char *) movies->movies[i], 
+                                          strlen(movies->movies[i]) + 1,
+                                          seq , END_DATA_COD);
+
+    for (i = 0; i < movies->num_movies; i++) {
+        if (!send_packet_in_timeout(sockfd, packets_movies[i], buffer)) {
+            success = 0;
+            break;
+        }
+    }
+
+    for (i = 0; i < movies->num_movies; i++) {
+        free(packets_movies[i]);
+    }
+
+    free(packets_movies);
+    free(buffer);
+
+    return success;
 }
 
 /* Retorna 1 se todos os pacotes foram enviados com sucesso e 0 se nao foram. */
@@ -64,13 +93,9 @@ int send_seg_packets(unsigned char **packets, int sockfd) {
             continue;
         }
 
-        n = recv(sockfd, buffer, PACKET_SIZE, 0);
-
-        if (n == -1) {
+        if (!recv_packet_in_timeout(sockfd, buffer)) {
             continue;
         }
-
-        n = validate_packet(buffer, n);
 
         seq = get_packet_seq(packets[i]);
 

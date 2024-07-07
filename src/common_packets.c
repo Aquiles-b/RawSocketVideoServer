@@ -28,7 +28,7 @@ int recv_packet_in_timeout(int sockfd, unsigned char *buffer) {
     short num_bytes_read = 0;
     time_t start_time = time(NULL);
     while (1) {
-        if ((time(NULL) - start_time) >= TIMEOUT_RECV) {
+        if ((time(NULL) - start_time) >= TIMEOUT) {
             return 0;
         }
         if ((num_bytes_read = recv(sockfd, buffer, PACKET_SIZE, 0)) <= 0) {
@@ -39,6 +39,28 @@ int recv_packet_in_timeout(int sockfd, unsigned char *buffer) {
             continue;
         }
         return 1;
+    }
+}
+
+/* Retorna 1 em caso de sucesso e 0 em falha. */
+int send_packet_in_timeout(int sockfd, unsigned char *packet, unsigned char *buffer) {
+    unsigned char seq = get_packet_seq(packet);
+    time_t start_time = time(NULL);
+    while (1) {
+        if ((time(NULL) - start_time) >= TIMEOUT) {
+            return 0;
+        }
+        if (send_packet(sockfd, packet) == -1) {
+            continue;
+        }
+        if (!recv_packet_in_timeout(sockfd, buffer)) {
+            continue;
+        }
+        if (get_packet_code(buffer) == ACK_COD) {
+            if (seq == get_packet_seq(buffer)) {
+                return 1;
+            }
+        } 
     }
 }
 

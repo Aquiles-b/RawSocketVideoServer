@@ -26,15 +26,12 @@ int try_send_file(int sockfd, movies_t *movies, unsigned char *packet) {
             return 0;
         }
     }
-
-    send_file(sockfd, movies->movies[file_index]);
-
-    return 1;
+    return send_file(sockfd, movies->movies[file_index]);
 }
 
 int main(int argc, char *argv[]) {
-    if (argc != 3) {
-        fprintf(stderr, "Uso: %s <interface> <file>\n", argv[0]);
+    if (argc != 2) {
+        fprintf(stderr, "Uso: %s <interface>\n", argv[0]);
         return 1;
     }
     unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_SIZE);
