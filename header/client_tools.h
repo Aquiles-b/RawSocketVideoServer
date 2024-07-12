@@ -9,7 +9,7 @@
 
 /* Imprime a mensagem text e retorna a opcao escolhida pelo usuario.
  * A opcao nao pode ser 0! */
-unsigned int get_user_input(char *text);
+long int get_user_input(char *text);
 
 int view_movies_list(int sockfd, unsigned char *packet_server);
 

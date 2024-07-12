@@ -1,6 +1,65 @@
 #include "../header/socket_handler.h"
 #include "../header/client_tools.h"
 
+void show_movie_date_size_packet(unsigned char *packet_server) {
+    unsigned char *data = packet_server + 3;
+    unsigned long int size = *((unsigned long int *) (data));
+    unsigned short day, month, year;
+    day = data[8];
+    month = data[9];
+    year = (data[10] << 8) | data[11];
+
+    printf("Tamanho: %lu bytes\n", size);
+    printf("Data: %02d/%02d/%d\n", day, month, year);
+}
+
+int handle_recv_file_desc_packet(int sockfd, unsigned char *packet_server) {
+    while (1) {
+        if (!recv_packet_in_timeout(sockfd, packet_server)) {
+            return 0;
+        }
+        if (get_packet_code(packet_server) == FILE_DESC_COD) {
+            break;
+        }
+        if (get_packet_code(packet_server) == ERROR_ACCESS_DENIED) {
+            printf("Arquivo com acesso nao permitido\n");
+            return 0;
+        }
+        if (get_packet_code(packet_server) == ERROR_NOT_FOUND) {
+            printf("Arquivo nao encontrado\n");
+            return 0;
+        }
+    }
+    return 1;
+}
+
+int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
+    unsigned char data[PACKET_SIZE] = {0};
+    memcpy(data, &opt, sizeof(long int));
+    unsigned char *req_file_desc_packet = create_packet(data, 0, 0, DOWNLOAD_FILE_COD);
+
+    if (!send_packet_with_confirm(sockfd, req_file_desc_packet, packet_server)){
+        return 0;
+    }
+    free(req_file_desc_packet);
+
+    if (!handle_recv_file_desc_packet(sockfd, packet_server)) {
+        return 0;
+    }
+
+    show_movie_date_size_packet(packet_server);
+
+    opt = get_user_input("Prosseguir com o download? (1-Sim, 2-Nao): ");
+    printf("\n");
+    if (opt != 1) {
+        return 0;
+    }
+    send_ACK(sockfd, 0);
+
+    printf("Baixando arquivo...\n");
+    return recv_file(sockfd, "stream_movie.mp4");
+}
+
 int main(int argc, char *argv[]) {
     if (argc != 2) {
         fprintf(stderr, "Uso: %s <interface>\n", argv[0]);
@@ -8,18 +67,19 @@ int main(int argc, char *argv[]) {
     }
 
     unsigned char *packet_server = malloc(sizeof(unsigned char) * PACKET_SIZE);
-    unsigned int option = 0;
+    long int option = 0;
 
     int sockfd = open_raw_socket(argv[1]);
     while (1) {
-        option = get_user_input("1- Mostrar filmes\n2- Baixar arquivo\n3- Sair\n:");
+        option = get_user_input("1- Mostrar filmes\n2- Baixar arquivo\n3- Sair\n: ");
         switch (option) {
             case 1:
                 view_movies_list(sockfd, packet_server);
                 break;
             case 2:
-                get_user_input("Digite o ID do filme\n: ");
-                /* get_movie(sockfd, packet_server); */
+                option = get_user_input("Digite o ID do filme: ");
+                printf("\n");
+                try_get_movie(sockfd, packet_server, option);
                 break;
         }
     }

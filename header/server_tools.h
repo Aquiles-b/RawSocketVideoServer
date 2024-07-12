@@ -35,7 +35,7 @@ int send_seg_packets(unsigned char **packets, int sockfd);
 /* Retorna 1 se o arquivo foi enviado com sucesso e 0 se nao foi. */
 int send_file(int sockfd, char *file_name);
 
-unsigned long int get_file_index(const unsigned char *packet);
+long int get_movie_index(const unsigned char *packet);
 
 /* (Aloca memoria) Retorna NULL em caso de falha. */
 unsigned char *create_packet_file_desc(int sockfd, char *file_name);

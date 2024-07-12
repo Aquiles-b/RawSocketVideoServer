@@ -147,8 +147,10 @@ int send_file(int sockfd, char *file_name) {
     return 1;
 }
 
-unsigned long int get_file_index(const unsigned char *packet) {
-    return *((unsigned long int *) (packet + 3));
+long int get_movie_index(const unsigned char *packet) {
+    long int idx = 0;
+    memcpy(&idx, packet + 3, sizeof(long int));
+    return idx;
 }
 
 /* (Aloca memoria) Retorna NULL em caso de falha. */
@@ -178,7 +180,7 @@ unsigned char *create_packet_file_desc(int sockfd, char *file_name){
 /* Retorna 1 se o descritor do arquivo foi enviado com sucesso e 0 se nao foi. */
 int send_file_desc(int sockfd, char *file_name) {
     unsigned char *pck_file_desc = create_packet_file_desc(sockfd, file_name);
-    if (pck_file_desc == NULL) {
+    if (!pck_file_desc) {
         send_error(sockfd, ERROR_ACCESS_DENIED);
         return 0;
     }
@@ -186,7 +188,7 @@ int send_file_desc(int sockfd, char *file_name) {
     unsigned char buffer[PACKET_SIZE] = {0};
     unsigned char client_code = 0;
     while (1) {
-        if ((time(NULL) - start_time) >= TIMEOUT) {
+        if ((time(NULL) - start_time) >= TIMEOUT*30) {
             break;
         }
         if (send_packet(sockfd, pck_file_desc) == -1) {
@@ -195,7 +197,6 @@ int send_file_desc(int sockfd, char *file_name) {
         if (!recv_packet_in_timeout(sockfd, buffer)) {
             continue;
         }
-
         client_code = get_packet_code(buffer);
         if (client_code == ACK_COD) {
             free(pck_file_desc);

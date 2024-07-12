@@ -8,7 +8,7 @@
 #define ERROR_NOT_FOUND 2
 #define ERROR_DISK_FULL 3
 
-#define TIMEOUT 5
+#define TIMEOUT 1
 
 int send_ACK(int sockfd, unsigned char seq);
 
