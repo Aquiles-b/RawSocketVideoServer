@@ -87,21 +87,20 @@ int send_seg_packets(unsigned char **packets, int sockfd) {
     unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_SIZE);
     unsigned char seq = 0, seq_ack = 0;
     unsigned long int i = 0;
-    short n = 0;
 
     while (packets[i]) {
         if (send_packet(sockfd, packets[i]) == -1) {
             continue;
         }
-
         if (!recv_packet_in_timeout(sockfd, buffer)) {
             continue;
         }
-
         seq = get_packet_seq(packets[i]);
+        printf("%ld - seq: %x\n", i, seq);
 
-        if (n && (get_packet_code(buffer) == ACK_COD)) {
+        if (get_packet_code(buffer) == ACK_COD) {
             seq_ack = get_packet_seq(buffer);
+            printf("ACK seq %x\n", seq_ack);
             if (seq == seq_ack) {
                 i++;
             }
@@ -148,9 +147,7 @@ int send_file(int sockfd, char *file_name) {
 }
 
 long int get_movie_index(const unsigned char *packet) {
-    long int idx = 0;
-    memcpy(&idx, packet + 3, sizeof(long int));
-    return idx;
+    return *((long int *) (packet + 3)) - 1;
 }
 
 /* (Aloca memoria) Retorna NULL em caso de falha. */
@@ -187,6 +184,7 @@ int send_file_desc(int sockfd, char *file_name) {
     time_t start_time = time(NULL);
     unsigned char buffer[PACKET_SIZE] = {0};
     unsigned char client_code = 0;
+    clear_socket_buffer(sockfd);
     while (1) {
         if ((time(NULL) - start_time) >= TIMEOUT*30) {
             break;
@@ -202,7 +200,7 @@ int send_file_desc(int sockfd, char *file_name) {
             free(pck_file_desc);
             return 1;
         }
-        else if (client_code == ERROR_DISK_FULL) {
+        else if (client_code == ERROR_COD) {
             break;
         }
     }

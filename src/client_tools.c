@@ -31,10 +31,10 @@ void print_movie(unsigned char *packet, unsigned int id_movie) {
 
 int recv_and_print_movie_names_packets(int sockfd, unsigned char *packet_server) {
     unsigned char code = 0;
-    unsigned char seq = 0, last_seq = 0;
+    unsigned char packet_seq = 0, current_seq = 0;
     unsigned int success = 1, id_movie = 1;
 
-    printf("\n-Filmes-------------------------------------\n");
+    printf("-Filmes-------------------------------------\n");
     while (1) {
         if (!recv_packet_in_timeout(sockfd, packet_server)) {
             success = 0;
@@ -45,15 +45,15 @@ int recv_and_print_movie_names_packets(int sockfd, unsigned char *packet_server)
             send_NACK(sockfd, 0);
             continue;
         }
-        seq = get_packet_seq(packet_server);
-        if (seq == (last_seq + 1) || (id_movie == 1)) {
-            last_seq = seq;
+        packet_seq = get_packet_seq(packet_server);
+        if (packet_seq == current_seq) {
+            current_seq++;
             print_movie(packet_server, id_movie);
             id_movie++;
-            send_ACK(sockfd, seq);
+            send_ACK(sockfd, packet_seq);
         }
-        else if (seq == last_seq) {
-            send_ACK(sockfd, seq);
+        else {
+            send_ACK(sockfd, current_seq);
         }
         if (code == END_DATA_COD) {
             break;
@@ -84,7 +84,7 @@ int recv_file(int sockfd, char *filename) {
     }
 
     unsigned char buffer[PACKET_SIZE] = {0};
-    unsigned char last_seq = 0, seq = 0, cod = 0;
+    unsigned char current_seq = 0, packet_seq = 0, cod = 0;
     unsigned long int num_packets = 0;
     unsigned short tam_data = 0;
 
@@ -95,22 +95,21 @@ int recv_file(int sockfd, char *filename) {
 
         cod = get_packet_code(buffer);
         if ((cod != DATA_COD) && (cod != END_DATA_COD)) {
-            send_NACK(sockfd, seq);
+            send_NACK(sockfd, current_seq);
             continue;
         }
 
-        seq = get_packet_seq(buffer);
-        if (seq == (last_seq + 1) || (num_packets == 0)) {
-            last_seq = seq;
+        packet_seq = get_packet_seq(buffer);
+        printf("%ld - packet seq: %x current_seq: %x\n", num_packets, packet_seq, current_seq);
+        if (packet_seq == current_seq) {
+            current_seq++;
             tam_data = get_packet_data_size(buffer);
             fwrite(buffer + 3, 1, tam_data, file);
+            send_ACK(sockfd, packet_seq);
             num_packets++;
-            send_ACK(sockfd, seq);
-            num_packets++;
-            continue;
         }
-        else if (seq == last_seq) {
-            send_ACK(sockfd, seq);
+        else {
+            send_ACK(sockfd, current_seq);
         }
         if (cod == END_DATA_COD) {
             break;

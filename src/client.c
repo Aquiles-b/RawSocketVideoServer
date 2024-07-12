@@ -16,17 +16,19 @@ void show_movie_date_size_packet(unsigned char *packet_server) {
 int handle_recv_file_desc_packet(int sockfd, unsigned char *packet_server) {
     while (1) {
         if (!recv_packet_in_timeout(sockfd, packet_server)) {
+            printf("Sem resposta do server\n\n");
             return 0;
         }
         if (get_packet_code(packet_server) == FILE_DESC_COD) {
             break;
         }
-        if (get_packet_code(packet_server) == ERROR_ACCESS_DENIED) {
-            printf("Arquivo com acesso nao permitido\n");
-            return 0;
-        }
-        if (get_packet_code(packet_server) == ERROR_NOT_FOUND) {
-            printf("Arquivo nao encontrado\n");
+        if (get_packet_code(packet_server) == ERROR_COD) {
+            if (get_error_type(packet_server) == ERROR_ACCESS_DENIED) {
+                printf("!! Arquivo com acesso nao permitido\n\n");
+            }
+            else {
+                printf("!! Arquivo nao encontrado\n\n");
+            }
             return 0;
         }
     }
@@ -36,9 +38,11 @@ int handle_recv_file_desc_packet(int sockfd, unsigned char *packet_server) {
 int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
     unsigned char data[PACKET_SIZE] = {0};
     memcpy(data, &opt, sizeof(long int));
-    unsigned char *req_file_desc_packet = create_packet(data, 0, 0, DOWNLOAD_FILE_COD);
+    unsigned char *req_file_desc_packet = create_packet(data, sizeof(long int),
+                                                        0, DOWNLOAD_FILE_COD);
 
     if (!send_packet_with_confirm(sockfd, req_file_desc_packet, packet_server)){
+        printf("Sem resposta do server\n\n");
         return 0;
     }
     free(req_file_desc_packet);
@@ -52,6 +56,8 @@ int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
     opt = get_user_input("Prosseguir com o download? (1-Sim, 2-Nao): ");
     printf("\n");
     if (opt != 1) {
+        printf("Mandando erro disco cheio\n");
+        send_error(sockfd, ERROR_DISK_FULL);
         return 0;
     }
     send_ACK(sockfd, 0);
@@ -74,7 +80,9 @@ int main(int argc, char *argv[]) {
         option = get_user_input("1- Mostrar filmes\n2- Baixar arquivo\n3- Sair\n: ");
         switch (option) {
             case 1:
-                view_movies_list(sockfd, packet_server);
+                if (!view_movies_list(sockfd, packet_server)) {
+                    printf("\nSem resposta do server.\n\n");
+                }
                 break;
             case 2:
                 option = get_user_input("Digite o ID do filme: ");
@@ -82,6 +90,7 @@ int main(int argc, char *argv[]) {
                 try_get_movie(sockfd, packet_server, option);
                 break;
         }
+        clear_socket_buffer(sockfd);
     }
 
     free(packet_server);

@@ -24,4 +24,6 @@ int send_packet_with_confirm(int sockfd, unsigned char *packet, unsigned char *b
 
 int send_error(int sockfd, unsigned char error_code);
 
+unsigned char get_error_type(const unsigned char *packet);
+
 #endif // _COMMON_PACKETS_H_

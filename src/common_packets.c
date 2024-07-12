@@ -73,3 +73,7 @@ int send_error(int sockfd, unsigned char error_code) {
     error_packet[PACKET_SIZE - 1] = calc_crc_8(error_packet + 1, PACKET_SIZE - 2);
     return send(sockfd, error_packet, PACKET_SIZE, 0);
 }
+
+unsigned char get_error_type(const unsigned char *packet) {
+    return packet[3];
+}
