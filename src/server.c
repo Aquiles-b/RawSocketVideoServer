@@ -45,6 +45,7 @@ int main(int argc, char *argv[]) {
     }
 
     close(sockfd);
+    free(packet_client);
 
     return 0;
 }

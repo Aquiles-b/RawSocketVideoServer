@@ -41,7 +41,8 @@ void list_files_in_dir(char *dir_path, movies_t *movies) {
 
     while ((entry = readdir(dir)) != NULL) {
         if (entry->d_type == DT_REG) {
-            movies->movies[i] = entry->d_name;
+            movies->movies[i] = malloc(sizeof(char) * (strlen(entry->d_name) + 1));
+            strcpy(movies->movies[i], entry->d_name);
             i++;
         }
     }

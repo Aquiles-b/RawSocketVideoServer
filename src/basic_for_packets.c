@@ -42,7 +42,9 @@ unsigned char *create_packet(const unsigned char *data, unsigned short size_data
     packet[0] = INIT_MARKER;
     packet[1] = (size_data << 2) | (seq >> 3);
     packet[2] = (seq << 5) | code;
-    memcpy(packet + 3, data, size_data);
+    if (data != NULL) {
+        memcpy(packet + 3, data, size_data);
+    }
     packet[PACKET_SIZE - 1] = calc_crc_8(packet + 1, PACKET_SIZE - 2);
 
     return packet;
