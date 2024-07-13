@@ -14,6 +14,6 @@ long int get_user_input(char *text);
 int view_movies_list(int sockfd, unsigned char *packet_server);
 
 /* Retorna 1 caso sucesso, 0 caso falha */
-int recv_file(int sockfd, char *filename);
+int recv_file(int sockfd, char *filename, unsigned long int file_size);
 
 #endif // _CLIENT_TOOLS_H

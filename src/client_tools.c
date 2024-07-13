@@ -48,12 +48,13 @@ int recv_and_print_movie_names_packets(int sockfd, unsigned char *packet_server)
         packet_seq = get_packet_seq(packet_server);
         if (packet_seq == current_seq) {
             current_seq++;
+            current_seq &= 0x1f;
             print_movie(packet_server, id_movie);
             id_movie++;
             send_ACK(sockfd, packet_seq);
         }
-        else {
-            send_ACK(sockfd, current_seq);
+        else if (packet_seq == ((current_seq - 1) & 0x1f)) {
+            send_ACK(sockfd, packet_seq);
         }
         if (code == END_DATA_COD) {
             break;
@@ -76,7 +77,7 @@ int view_movies_list(int sockfd, unsigned char *packet_server) {
     return recv_and_print_movie_names_packets(sockfd, packet_server);
 }
 
-int recv_file(int sockfd, char *filename) {
+int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     FILE *file = fopen(filename, "wb");
     if (file == NULL) {
         fprintf(stderr, "Erro ao criar o arquivo\n");
@@ -87,36 +88,48 @@ int recv_file(int sockfd, char *filename) {
     unsigned char current_seq = 0, packet_seq = 0, cod = 0;
     unsigned long int num_packets = 0;
     unsigned short tam_data = 0;
+    unsigned long int total_packets = file_size / (PACKET_SIZE - 4);
+    if (file_size % (PACKET_SIZE - 4)) {
+        total_packets++;
+    }
+    float percent = 100.0f / total_packets;
 
+    printf("Baixando... %d%%", (int)(num_packets*percent));
     while (1) {
         if (!recv_packet_in_timeout(sockfd, buffer)) {
+            printf("\n");
+            printf("Timeout\n");
             return 0;
         }
 
         cod = get_packet_code(buffer);
         if ((cod != DATA_COD) && (cod != END_DATA_COD)) {
-            send_NACK(sockfd, current_seq);
+            send_NACK(sockfd, 0);
             continue;
         }
 
         packet_seq = get_packet_seq(buffer);
-        printf("%ld - packet seq: %x current_seq: %x\n", num_packets, packet_seq, current_seq);
         if (packet_seq == current_seq) {
+            printf("\r");
+            printf("Baixando... %d%%", (int)(num_packets*percent));
+            fflush(stdout);
             current_seq++;
+            current_seq &= 0x1f;
             tam_data = get_packet_data_size(buffer);
             fwrite(buffer + 3, 1, tam_data, file);
             send_ACK(sockfd, packet_seq);
             num_packets++;
         }
-        else {
-            send_ACK(sockfd, current_seq);
+        else if (packet_seq == ((current_seq - 1) & 0x1f)) {
+            send_ACK(sockfd, packet_seq);
         }
         if (cod == END_DATA_COD) {
             break;
         }
     }
     fclose(file);
-    printf("Arquivo baixado com sucesso!\n\n");
+    printf("\r");
+    printf("Baixando... 100%%\n");
 
     return 1;
 }

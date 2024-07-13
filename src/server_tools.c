@@ -96,11 +96,9 @@ int send_seg_packets(unsigned char **packets, int sockfd) {
             continue;
         }
         seq = get_packet_seq(packets[i]);
-        printf("%ld - seq: %x\n", i, seq);
 
         if (get_packet_code(buffer) == ACK_COD) {
             seq_ack = get_packet_seq(buffer);
-            printf("ACK seq %x\n", seq_ack);
             if (seq == seq_ack) {
                 i++;
             }
@@ -123,20 +121,24 @@ int send_file(int sockfd, char *file_name) {
     }
     unsigned long int num_bytes_read = 0;
     unsigned long int num_segs = file_size / DATA_SIZE;
+    unsigned char **packets = NULL;
 
-    if (file_size % DATA_SIZE != 0) {
+    if ((file_size % DATA_SIZE) != 0) {
         num_segs++;
     }
 
-    while(num_segs > 1) {
+    unsigned char sequence = 0;
+    while (num_segs > 1) {
         num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
-        unsigned char **packets = segment_data_in_packets(buffer_data, num_bytes_read, DATA_COD);
+        packets = segment_data_in_packets(buffer_data, num_bytes_read,
+                                            DATA_COD, &sequence);
         send_seg_packets(packets, sockfd);
         free_packets(&packets);
         num_segs--;
     }
     num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
-    unsigned char **packets = segment_data_in_packets(buffer_data, num_bytes_read, END_DATA_COD);
+    packets = segment_data_in_packets(buffer_data, num_bytes_read, 
+                                        END_DATA_COD, &sequence);
     send_seg_packets(packets, sockfd);
     free_packets(&packets);
 

@@ -42,7 +42,7 @@ int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
                                                         0, DOWNLOAD_FILE_COD);
 
     if (!send_packet_with_confirm(sockfd, req_file_desc_packet, packet_server)){
-        printf("Sem resposta do server\n\n");
+        printf("!! Sem resposta do server\n\n");
         return 0;
     }
     free(req_file_desc_packet);
@@ -56,14 +56,18 @@ int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
     opt = get_user_input("Prosseguir com o download? (1-Sim, 2-Nao): ");
     printf("\n");
     if (opt != 1) {
-        printf("Mandando erro disco cheio\n");
         send_error(sockfd, ERROR_DISK_FULL);
         return 0;
     }
     send_ACK(sockfd, 0);
 
-    printf("Baixando arquivo...\n");
-    return recv_file(sockfd, "stream_movie.mp4");
+    unsigned long int size = *((unsigned long int *) (packet_server + 3));
+    if (!recv_file(sockfd, "stream_movie.mp4", size)) {
+        printf("Erro ao baixar arquivo\n\n");
+        return 0;
+    }
+
+    return 1;
 }
 
 int main(int argc, char *argv[]) {
@@ -87,7 +91,10 @@ int main(int argc, char *argv[]) {
             case 2:
                 option = get_user_input("Digite o ID do filme: ");
                 printf("\n");
-                try_get_movie(sockfd, packet_server, option);
+                if (try_get_movie(sockfd, packet_server, option)) {
+                    printf("Concluido!\n\n");
+                    system("vlc-wrapper stream_movie.mp4 > /etc/null 2>&1");
+                }
                 break;
         }
         clear_socket_buffer(sockfd);

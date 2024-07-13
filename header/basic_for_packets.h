@@ -41,7 +41,9 @@ unsigned char *create_packet(const unsigned char *data, unsigned short size_data
 /* (Aloca memoria). A ultima posicao do vetor eh NULL. */
 unsigned char **segment_data_in_packets(unsigned char *data, 
                                         const unsigned long int size, 
-                                        unsigned char last_packet_code);
+                                        unsigned char last_packet_code,
+                                        unsigned char *sequence);
+
 void free_packets(unsigned char ***packets);
 
 void clear_socket_buffer(int sockfd);

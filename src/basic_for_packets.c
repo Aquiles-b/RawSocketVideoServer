@@ -53,7 +53,8 @@ unsigned char *create_packet(const unsigned char *data, unsigned short size_data
 /* (Aloca memoria). A ultima posicao do vetor eh NULL. */
 unsigned char **segment_data_in_packets(unsigned char *data, 
                                         const unsigned long int size, 
-                                        unsigned char last_packet_code) {
+                                        unsigned char last_packet_code,
+                                        unsigned char *sequence) {
     if (size == 0) {
         return NULL;
     }
@@ -70,16 +71,17 @@ unsigned char **segment_data_in_packets(unsigned char *data,
     }
 
     unsigned char **packets = malloc(sizeof(unsigned char *) * (num_packets + 1));
-    unsigned char sequence = 0;
     unsigned long int i = 0;
 
     for (; i < num_packets - 1; i++) {
-        packets[i] = create_packet(data, max_size_data, sequence, DATA_COD);
+        packets[i] = create_packet(data, max_size_data, *sequence, DATA_COD);
         data += max_size_data;
-        ++sequence;
-        sequence &= 0x1f;
+        *sequence += 1;
+        *sequence &= 0x1f;
     }
-    packets[i] = create_packet(data, last_packet_size, sequence, last_packet_code);
+    packets[i] = create_packet(data, last_packet_size, *sequence, last_packet_code);
+    *sequence += 1;
+    *sequence &= 0x1f;
 
     packets[num_packets] = NULL;
 
