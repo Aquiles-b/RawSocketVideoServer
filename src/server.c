@@ -33,14 +33,15 @@ int main(int argc, char *argv[]) {
         if (!recv_packet_in_timeout(sockfd, packet_client)) {
             continue;
         }
-        send_ACK(sockfd, 0);
 
         code = get_packet_code(packet_client);
         switch (code) {
             case LIST_FILES_COD:
+                send_ACK(sockfd, 0);
                 send_movies_list(sockfd, &movies_list);
                 break; 
             case DOWNLOAD_FILE_COD:
+                send_ACK(sockfd, 0);
                 try_send_movie(sockfd, &movies_list, packet_client);
                 break;
         }

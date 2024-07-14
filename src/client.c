@@ -1,40 +1,6 @@
 #include "../header/socket_handler.h"
 #include "../header/client_tools.h"
 
-void show_movie_date_size_packet(unsigned char *packet_server) {
-    unsigned char *data = packet_server + 3;
-    unsigned long int size = *((unsigned long int *) (data));
-    unsigned short day, month, year;
-    day = data[8];
-    month = data[9];
-    year = (data[10] << 8) | data[11];
-
-    printf("Tamanho: %lu bytes\n", size);
-    printf("Data: %02d/%02d/%d\n", day, month, year);
-}
-
-int handle_recv_file_desc_packet(int sockfd, unsigned char *packet_server) {
-    while (1) {
-        if (!recv_packet_in_timeout(sockfd, packet_server)) {
-            printf("Sem resposta do server\n\n");
-            return 0;
-        }
-        if (get_packet_code(packet_server) == FILE_DESC_COD) {
-            break;
-        }
-        if (get_packet_code(packet_server) == ERROR_COD) {
-            if (get_error_type(packet_server) == ERROR_ACCESS_DENIED) {
-                printf("!! Arquivo com acesso nao permitido\n\n");
-            }
-            else {
-                printf("!! Arquivo nao encontrado\n\n");
-            }
-            return 0;
-        }
-    }
-    return 1;
-}
-
 int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
     unsigned char data[PACKET_SIZE] = {0};
     memcpy(data, &opt, sizeof(long int));
@@ -63,7 +29,7 @@ int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
 
     unsigned long int size = *((unsigned long int *) (packet_server + 3));
     if (!recv_file(sockfd, "stream_movie.mp4", size)) {
-        printf("Erro ao baixar arquivo\n\n");
+        printf("!! Erro ao baixar arquivo\n\n");
         return 0;
     }
 

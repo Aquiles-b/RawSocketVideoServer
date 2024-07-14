@@ -103,10 +103,11 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     float percent = 100.0f / total_packets;
 
     printf("Baixando... %d%%", (int)(num_packets*percent));
+    clear_socket_buffer(sockfd);
     while (1) {
         if (!recv_packet_in_timeout(sockfd, buffer)) {
             printf("\n");
-            printf("Timeout\n");
+            printf("!! Timeout\n");
             return 0;
         }
 
@@ -139,5 +140,39 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     printf("\r");
     printf("Baixando... 100%%\n");
 
+    return 1;
+}
+
+void show_movie_date_size_packet(unsigned char *packet_server) {
+    unsigned char *data = packet_server + 3;
+    unsigned long int size = *((unsigned long int *) (data));
+    unsigned short day, month, year;
+    day = data[8];
+    month = data[9];
+    year = (data[10] << 8) | data[11];
+
+    printf("Tamanho: %.2fMb (%lu)\n", size / 1048576.0f, size);
+    printf("Data: %02d/%02d/%d\n", day, month, year);
+}
+
+int handle_recv_file_desc_packet(int sockfd, unsigned char *packet_server) {
+    while (1) {
+        if (!recv_packet_in_timeout(sockfd, packet_server)) {
+            printf("Sem resposta do server\n\n");
+            return 0;
+        }
+        if (get_packet_code(packet_server) == FILE_DESC_COD) {
+            break;
+        }
+        if (get_packet_code(packet_server) == ERROR_COD) {
+            if (get_error_type(packet_server) == ERROR_ACCESS_DENIED) {
+                printf("!! Arquivo com acesso nao permitido\n\n");
+            }
+            else {
+                printf("!! Arquivo nao encontrado\n\n");
+            }
+            return 0;
+        }
+    }
     return 1;
 }

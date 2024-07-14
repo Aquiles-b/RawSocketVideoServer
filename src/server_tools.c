@@ -194,7 +194,7 @@ int send_file_desc(int sockfd, char *file_name) {
     unsigned char client_code = 0;
     clear_socket_buffer(sockfd);
     while (1) {
-        if ((time(NULL) - start_time) >= TIMEOUT*30) {
+        if ((time(NULL) - start_time) >= TIMEOUT*20) {
             break;
         }
         if (send_packet(sockfd, pck_file_desc) == -1) {
