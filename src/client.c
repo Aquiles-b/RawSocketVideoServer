@@ -84,9 +84,7 @@ int main(int argc, char *argv[]) {
         option = get_user_input("1- Mostrar filmes\n2- Baixar arquivo\n3- Sair\n: ");
         switch (option) {
             case 1:
-                if (!view_movies_list(sockfd, packet_server)) {
-                    printf("\nSem resposta do server.\n\n");
-                }
+                view_movies_list(sockfd, packet_server);
                 break;
             case 2:
                 option = get_user_input("Digite o ID do filme: ");

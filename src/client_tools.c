@@ -41,6 +41,13 @@ int recv_and_print_movie_names_packets(int sockfd, unsigned char *packet_server)
             break;
         }
         code = get_packet_code(packet_server);
+        if (code == ERROR_COD) {
+            if (get_error_type(packet_server) == ERROR_NOT_FOUND) {
+                printf("Nenhum filme encontrado\n");
+            }
+            success = 0;
+            break;
+        }
         if ((code != SHOW_IN_SCREEN_COD) && (code != END_DATA_COD)) {
             send_NACK(sockfd, 0);
             continue;
@@ -69,6 +76,7 @@ int view_movies_list(int sockfd, unsigned char *packet_server) {
     unsigned char *solicit_movies_pckt = create_packet(NULL, 0, 0, LIST_FILES_COD);
 
     if (!send_packet_with_confirm(sockfd, solicit_movies_pckt, packet_server)) {
+        printf("\nSem resposta do server.\n\n");
         free(solicit_movies_pckt);
         return 0;
     }

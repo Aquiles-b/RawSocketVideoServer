@@ -30,6 +30,8 @@ void list_files_in_dir(char *dir_path, movies_t *movies) {
     struct dirent *entry;
 
     if (!(dir = opendir(dir_path))) {
+        movies->num_movies = 0;
+        movies->movies = NULL;
         return;
     }
 
@@ -50,6 +52,10 @@ void list_files_in_dir(char *dir_path, movies_t *movies) {
 }
 
 int send_movies_list(int sockfd, movies_t *movies) {
+    if (movies->num_movies == 0) {
+        send_error(sockfd, ERROR_NOT_FOUND);
+        return 0;
+    }
     unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_SIZE);
     unsigned char **packets_movies = malloc(sizeof(unsigned char *) * movies->num_movies);
     unsigned char seq = 0;
