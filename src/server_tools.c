@@ -96,22 +96,88 @@ int send_window(int sockfd, window_packet_t *w_packet) {
     return 1;
 }
 
-window_packet_t *free_packets_list_until_node(window_packet_t *w_packet_head, 
+void free_packets_list_until_node(window_packet_head_t *w_packet_h, 
                                         window_packet_t *w_packet_node) {
-    window_packet_t *w_packet = w_packet_head, *w_packet_aux = NULL;
+    window_packet_t *w_packet = w_packet_h->head, *w_packet_aux = NULL;
     while (w_packet) {
         w_packet_aux = w_packet;
         w_packet = w_packet->next_packet;
         free(w_packet_aux->packet);
         free(w_packet_aux);
+        w_packet_h->size--;
         if (w_packet_aux == w_packet_node) {
             break;
+        }
+    }
+    w_packet_h->head = w_packet;
+}
+
+void change_last_node_packet_code(window_packet_head_t *w_packet_h, unsigned char code) {
+    window_packet_t *w_packet = w_packet_h->tail;
+    w_packet->packet[2] &= 0xe0;
+    w_packet->packet[2] |= code;
+}
+
+window_packet_head_t *get_next_segment_file(FILE *file, unsigned char *sequence,
+                                                        unsigned char *buffer_data) {
+    window_packet_head_t *w_packet_head = NULL;
+    unsigned long int num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
+    if (num_bytes_read < DATA_SIZE) {
+        return segment_data_in_window_packets(buffer_data, num_bytes_read, 
+                                                END_DATA_COD, sequence);
+    }
+    w_packet_head = segment_data_in_window_packets(buffer_data, num_bytes_read, 
+                                                DATA_COD, sequence);
+
+    num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
+    if (num_bytes_read == 0) {
+        change_last_node_packet_code(w_packet_head, END_DATA_COD);
+    }
+    fseek(file, -num_bytes_read, SEEK_CUR);
+
+    return w_packet_head;
+}
+
+/* Junta as duas listas de pacotes em w_packet_h1. A lista w_packet_h2 e liberada. */
+void merge_window_packet_lists(window_packet_head_t *w_packet_h1, 
+                                        window_packet_head_t *w_packet_h2) {
+    w_packet_h1->tail->next_packet = w_packet_h2->head;
+    w_packet_h1->tail = w_packet_h2->tail;
+    w_packet_h1->size += w_packet_h2->size;
+    free(w_packet_h2);
+}
+
+window_packet_t *move_window_until_last_sent_packet(window_packet_t *w_packet, 
+                                                    unsigned char *buffer, 
+                                                    unsigned long int *send_packet_count) {
+    unsigned char code = get_packet_code(buffer);
+    unsigned char seq = get_packet_seq(buffer);
+    short find = 0;
+    if (code == NACK_COD) {
+        printf("packet %d buf %d\n", get_packet_seq(w_packet->packet), seq);
+        for (short i = 0; i < WINDOW_SIZE && w_packet; i++) {
+            if (get_packet_seq(w_packet->packet) == seq) {
+                find = 1;
+                break;
+            }
+            w_packet = w_packet->next_packet;
+            *send_packet_count += 1;
+        }
+        if (!find) {
+            fprintf(stderr, "Erro: Sequencia fora do range\n");
+        }
+    }
+    else {
+        for (short i = 0; i < WINDOW_SIZE && w_packet; i++) {
+            w_packet = w_packet->next_packet;
+            *send_packet_count += 1;
         }
     }
     return w_packet;
 }
 
 /* Retorna 1 se todos os pacotes foram enviados com sucesso e 0 se nao foram. */
+<<<<<<< HEAD
 <<<<<<< HEAD
 int send_seg_packets(unsigned char **packets, int sockfd) {
     unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_SIZE);
@@ -126,22 +192,28 @@ int send_seg_packets(unsigned char **packets, int sockfd) {
             continue;
 =======
 int send_packets_in_window(window_packet_t *w_packet_head, int sockfd) {
+=======
+int send_packets_in_window(int sockfd, FILE *file_to_send) {
+>>>>>>> d42b23a ([FIX] janela deslizante (falta algumas coisas))
     unsigned char *buffer;
-    window_packet_t *w_packet = w_packet_head, *w_packet_aux = NULL;
-    unsigned int current_packet = 0;
+    window_packet_head_t *w_packet_head_aux = NULL, *w_packet_head = NULL;
+    window_packet_t *w_packet = NULL;
+    unsigned long int send_packet_count = 0;
+    unsigned char code, last_packet_sequence = 0;
     int success = 1;
 
-    unsigned char code, packet_seq;
-
-    if (!(buffer = malloc(sizeof(unsigned char) * PACKET_SIZE))) {
+    if (!(buffer = malloc(sizeof(unsigned char) * DATA_SIZE))) {
         return 0;
     }
+    w_packet_head = get_next_segment_file(file_to_send, &last_packet_sequence, buffer);
+    w_packet = w_packet_head->head;
 
     while (w_packet) {
         if (!send_window(sockfd, w_packet)){
             success = 0;
             break;
         }
+<<<<<<< HEAD
         if (!recv_packet_in_timeout(sockfd, buffer)) {
             success = 0;
             break;
@@ -168,14 +240,40 @@ int send_packets_in_window(window_packet_t *w_packet_head, int sockfd) {
         w_packet_aux = w_packet;
         while (w_packet_aux) {
             if (get_packet_seq(w_packet_aux->packet) == packet_seq) {
+=======
+        while (1) {
+            clear_socket_buffer(sockfd);
+            if (!recv_packet_in_timeout(sockfd, buffer)) {
+                success = 0;
+>>>>>>> d42b23a ([FIX] janela deslizante (falta algumas coisas))
                 break;
             }
-            w_packet_aux = w_packet_aux->next_packet;
+            code = get_packet_code(buffer);
+            if (code != ACK_COD && code != NACK_COD) {
+                continue;
+            }
+            break;
         }
 
-    }
+        w_packet = move_window_until_last_sent_packet(w_packet, buffer, &send_packet_count);
+        if (!w_packet) {
+            break;
+        }
 
+        if ((w_packet_head->size - WINDOW_SIZE + 1 - send_packet_count) < WINDOW_SIZE) {
+            free_packets_list_until_node(w_packet_head, w_packet);
+            w_packet_head_aux = get_next_segment_file(file_to_send, &last_packet_sequence, buffer);
+            if (!w_packet_head_aux) {
+                continue;
+            }
+            w_packet_head->head = w_packet;
+            merge_window_packet_lists(w_packet_head, w_packet_head_aux);
+            send_packet_count = 0;
+        }
+    }
     free(buffer);
+
+    printf("Saiuuuuu\n");
 
     return success;
 >>>>>>> 66e7900 ([FIX] janela deslizante)
@@ -187,41 +285,11 @@ int send_file(int sockfd, char *file_name) {
     if (file == NULL) {
         return 0;
     }
-
-    unsigned char *buffer_data = malloc(sizeof(unsigned char) * DATA_SIZE);
-    unsigned long int file_size = get_file_size(file_name);
-    if (file_size == 0) {
-        free(buffer_data);
-        fclose(file);
-        return 0;
-    }
-    unsigned long int num_bytes_read = 0;
-    unsigned long int num_segs = file_size / DATA_SIZE;
-    window_packet_t *w_packet_head = NULL;
-
-    if ((file_size % DATA_SIZE) != 0) {
-        num_segs++;
-    }
-
-    unsigned char sequence = 0;
-    while (num_segs > 1) {
-        num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
-        w_packet_head = segment_data_in_packets(buffer_data, num_bytes_read,
-                                            DATA_COD, &sequence);
-        send_packets_in_window(w_packet_head, sockfd);
-        free_window_packet_list(w_packet_head);
-        num_segs--;
-    }
-    num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
-    w_packet_head = segment_data_in_packets(buffer_data, num_bytes_read, 
-                                        END_DATA_COD, &sequence);
-    /* send_seg_packets(packets, sockfd); */
-    free_window_packet_list(w_packet_head);
+    int success = send_packets_in_window(sockfd, file);
 
     fclose(file);
-    free(buffer_data);
 
-    return 1;
+    return success;
 }
 
 long int get_movie_index(const unsigned char *packet) {
@@ -286,8 +354,8 @@ int send_file_desc(int sockfd, char *file_name) {
     return 0;
 }
 
-void free_window_packet_list(window_packet_t *w_packet_head) {
-    window_packet_t *w_packet_current = w_packet_head;
+void free_window_packet_list(window_packet_t *w_packet_init) {
+    window_packet_t *w_packet_current = w_packet_init;
     window_packet_t *w_packet_next = NULL;
     while (w_packet_current != NULL) {
         w_packet_next = w_packet_current->next_packet;
@@ -299,16 +367,14 @@ void free_window_packet_list(window_packet_t *w_packet_head) {
 
 
 /* (Aloca memoria). Monta uma lista window_packet_t de pacotes a partir
- * de um vetor de dados.
- * Retorna o primeiro nodo da lista. */
-window_packet_t *segment_data_in_packets(unsigned char *data, 
+ * de um vetor de dados. */
+window_packet_head_t *segment_data_in_window_packets(unsigned char *data, 
                                         const unsigned long int size, 
                                         unsigned char last_packet_code,
                                         unsigned char *sequence) {
     if (size == 0) {
         return NULL;
     }
-
     unsigned short max_size_data = PACKET_SIZE - 4;
     unsigned long int num_packets = size / max_size_data;
     unsigned short last_packet_size = size % max_size_data;
@@ -320,12 +386,13 @@ window_packet_t *segment_data_in_packets(unsigned char *data,
         last_packet_size = max_size_data;
     }
 
-    window_packet_t *w_packet_head = malloc(sizeof(window_packet_t));
+    window_packet_head_t *w_packet_head = malloc(sizeof(window_packet_head_t));
+    window_packet_t *w_packet_init = malloc(sizeof(window_packet_t));
     window_packet_t *w_packet_current = NULL, *w_packet_last = NULL;
     unsigned long int i = 0;
 
-    w_packet_current = w_packet_head;
-    w_packet_last = w_packet_head;
+    w_packet_current = w_packet_init;
+    w_packet_last = w_packet_init;
 
     for (; i < num_packets - 1; i++) {
         w_packet_last->next_packet = w_packet_current;
@@ -339,8 +406,11 @@ window_packet_t *segment_data_in_packets(unsigned char *data,
     }
     w_packet_last->next_packet = w_packet_current;
     w_packet_current->packet = create_packet(data, max_size_data, *sequence, DATA_COD);
-    w_packet_last = w_packet_current;
     w_packet_current->next_packet = NULL;
+
+    w_packet_head->head = w_packet_init;
+    w_packet_head->tail = w_packet_current;
+    w_packet_head->size = num_packets;
 
     *sequence += 1;
     *sequence &= 0x1f;

@@ -82,17 +82,75 @@ int view_movies_list(int sockfd, unsigned char *packet_server) {
     return recv_and_print_movie_names_packets(sockfd, packet_server);
 }
 
+/* Retorna a quantidade de buffers validos em sequencia. */
+int sort_server_packets(unsigned char **server_packets, unsigned char current_seq,
+                                                            short num_buffers) {
+    unsigned char *aux;
+    unsigned char next_packet_seq = current_seq;
+    short j = 0, i = 0;
+    for (; i < num_buffers; i++) {
+        for (j = 0; j < num_buffers; j++) {
+            if (get_packet_seq(server_packets[j]) == next_packet_seq) {
+                if (i != j) {
+                    aux = server_packets[i];
+                    server_packets[i] = server_packets[j];
+                    server_packets[j] = aux;
+                }
+                next_packet_seq++;
+                next_packet_seq &= 0x1f;
+                break;
+            }
+        }
+        if (j == num_buffers) {
+            return i;
+        }
+    }
+    return i;
+}
+
+/* Retorna a quantidade de buffers de dados validos. */
+int all_server_packets_are_data(unsigned char **server_packets, short num_buffers) {
+    unsigned char code = 0;
+    short i = 0;
+    for (; i < num_buffers; i++) {
+        code = get_packet_code(server_packets[i]);
+        if (code != DATA_COD && code != END_DATA_COD) {
+            return i;
+        }
+    }
+    return i;
+}
+
+/* Retorna o numero de pacotes validos recebidos. */
+short recv_window_packets(int sockfd, unsigned char **server_packets) {
+    clear_socket_buffer(sockfd);
+    short idx_buffer = 0, num_bytes_recv = 0;
+    for (; idx_buffer < WINDOW_SIZE; idx_buffer++) {
+        if ((num_bytes_recv = recv(sockfd, server_packets[idx_buffer], PACKET_SIZE, 0)) <= 0) {
+            break;
+        }
+        if (!validate_packet(server_packets[idx_buffer], num_bytes_recv)) {
+            break;
+        }
+    }
+    return idx_buffer;
+}
+
 int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     FILE *file = fopen(filename, "wb");
     if (file == NULL) {
         fprintf(stderr, "Erro ao criar o arquivo\n");
         return 0;
     }
-
-    unsigned char buffer[PACKET_SIZE] = {0};
-    unsigned char current_seq = 0, packet_seq = 0, cod = 0;
+    unsigned char **server_packets = malloc(sizeof(unsigned char *) * WINDOW_SIZE);
+    for (short i = 0; i < WINDOW_SIZE; i++) {
+        server_packets[i] = malloc(sizeof(unsigned char) * PACKET_SIZE);
+    }
+    unsigned char current_seq = 0, cod = 0;
     unsigned long int num_packets = 0;
     unsigned short tam_data = 0;
+    short idx_buffer = 0, idx_code_data = 0, idx_sorted_data = 0;
+
     unsigned long int total_packets = file_size / (PACKET_SIZE - 4);
     if (file_size % (PACKET_SIZE - 4)) {
         total_packets++;
@@ -102,37 +160,39 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     printf("Baixando... %d%%", (int)(num_packets*percent));
     clear_socket_buffer(sockfd);
     while (1) {
-        if (!recv_packet_in_timeout(sockfd, buffer)) {
-            printf("\n");
-            printf("!! Timeout\n");
-            return 0;
-        }
+        idx_buffer = recv_window_packets(sockfd, server_packets);
 
-        cod = get_packet_code(buffer);
-        if ((cod != DATA_COD) && (cod != END_DATA_COD)) {
-            send_NACK(sockfd, 0);
+        idx_code_data = all_server_packets_are_data(server_packets, idx_buffer);
+        idx_sorted_data = sort_server_packets(server_packets, current_seq, idx_code_data);
+
+        if (!idx_sorted_data) {
+            send_NACK(sockfd, current_seq);
             continue;
         }
 
-        packet_seq = get_packet_seq(buffer);
-        if (packet_seq == current_seq) {
+        for (short i = 0; i < idx_sorted_data; i++) {
             printf("\r");
             printf("Baixando... %d%%", (int)(num_packets*percent));
             fflush(stdout);
             current_seq++;
             current_seq &= 0x1f;
-            tam_data = get_packet_data_size(buffer);
-            fwrite(buffer + 3, 1, tam_data, file);
-            send_ACK(sockfd, packet_seq);
+            tam_data = get_packet_data_size(server_packets[i]);
+            fwrite(server_packets[i] + 3, 1, tam_data, file);
             num_packets++;
         }
-        else if (packet_seq == ((current_seq - 1) & 0x1f)) {
-            send_ACK(sockfd, packet_seq);
+        if (idx_sorted_data == WINDOW_SIZE) {
+            send_ACK(sockfd, current_seq);
         }
+        else {
+            send_NACK(sockfd, current_seq);
+        }
+
+        cod = get_packet_code(server_packets[idx_sorted_data-1]);
         if (cod == END_DATA_COD) {
             break;
         }
     }
+
     fclose(file);
     printf("\r");
     printf("Baixando... 100%%\n");

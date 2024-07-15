@@ -10,6 +10,9 @@
 
 #define TIMEOUT 1
 
+#define DATA_SIZE 63000
+#define WINDOW_SIZE 5
+
 int send_ACK(int sockfd, unsigned char seq);
 
 int send_NACK(int sockfd, unsigned char seq);
