@@ -50,52 +50,6 @@ unsigned char *create_packet(const unsigned char *data, unsigned short size_data
     return packet;
 }
 
-/* (Aloca memoria). A ultima posicao do vetor eh NULL. */
-unsigned char **segment_data_in_packets(unsigned char *data, 
-                                        const unsigned long int size, 
-                                        unsigned char last_packet_code,
-                                        unsigned char *sequence) {
-    if (size == 0) {
-        return NULL;
-    }
-
-    unsigned short max_size_data = PACKET_SIZE - 4;
-    unsigned long int num_packets = size / max_size_data;
-    unsigned short last_packet_size = size % max_size_data;
-
-    if (last_packet_size != 0) {
-        ++num_packets;
-    } 
-    else {
-        last_packet_size = max_size_data;
-    }
-
-    unsigned char **packets = malloc(sizeof(unsigned char *) * (num_packets + 1));
-    unsigned long int i = 0;
-
-    for (; i < num_packets - 1; i++) {
-        packets[i] = create_packet(data, max_size_data, *sequence, DATA_COD);
-        data += max_size_data;
-        *sequence += 1;
-        *sequence &= 0x1f;
-    }
-    packets[i] = create_packet(data, last_packet_size, *sequence, last_packet_code);
-    *sequence += 1;
-    *sequence &= 0x1f;
-
-    packets[num_packets] = NULL;
-
-    return packets;
-}
-
-void free_packets(unsigned char ***packets) {
-    for (unsigned long int i = 0; (*packets)[i] != NULL; i++) {
-        free((*packets)[i]);
-    }
-    free(*packets);
-    *packets = NULL;
-}
-
 void clear_socket_buffer(int sockfd) {
     unsigned char buffer[PACKET_SIZE] = {0};
     while (recv(sockfd, buffer, PACKET_SIZE, MSG_DONTWAIT) != -1);

@@ -58,11 +58,8 @@ int recv_and_print_movie_names_packets(int sockfd, unsigned char *packet_server)
             current_seq &= 0x1f;
             print_movie(packet_server, id_movie);
             id_movie++;
-            send_ACK(sockfd, packet_seq);
         }
-        else if (packet_seq == ((current_seq - 1) & 0x1f)) {
-            send_ACK(sockfd, packet_seq);
-        }
+        send_ACK(sockfd, packet_seq);
         if (code == END_DATA_COD) {
             break;
         }

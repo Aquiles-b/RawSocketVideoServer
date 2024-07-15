@@ -1,6 +1,10 @@
 #ifndef _BASE_PACKETS_H_
 #define _BASE_PACKETS_H_
 
+#include <stdlib.h>
+#include <string.h>
+#include <sys/socket.h>
+
 #define CRC_8_POLY 0xb
 
 #define PACKET_SIZE 67
@@ -22,10 +26,6 @@
 #define ACK_CRC 0x2d
 #define NACK_CRC 0x3d
 
-#include <stdlib.h>
-#include <string.h>
-#include <sys/socket.h>
-
 unsigned char calc_crc_8(const unsigned char *data, const short size);
 
 /* Retorna 1 se for valido e 0 se nao for. */
@@ -37,14 +37,6 @@ int validate_packet(const unsigned char *data, const short size);
 /* (Aloca memoria). Retorna NULL em caso de falha */
 unsigned char *create_packet(const unsigned char *data, unsigned short size_data,
                         unsigned char seq, unsigned char code);
-
-/* (Aloca memoria). A ultima posicao do vetor eh NULL. */
-unsigned char **segment_data_in_packets(unsigned char *data, 
-                                        const unsigned long int size, 
-                                        unsigned char last_packet_code,
-                                        unsigned char *sequence);
-
-void free_packets(unsigned char ***packets);
 
 void clear_socket_buffer(int sockfd);
 

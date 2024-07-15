@@ -64,6 +64,19 @@ int send_packet_with_confirm(int sockfd, unsigned char *packet, unsigned char *b
     }
 }
 
+int send_packet_in_timeout(int sockfd, unsigned char *packet) {
+    time_t start_time = time(NULL);
+    while (1) {
+        if ((time(NULL) - start_time) >= TIMEOUT) {
+            return 0;
+        }
+        if (send_packet(sockfd, packet) == -1) {
+            continue;
+        }
+        return 1;
+    }
+}
+
 int send_error(int sockfd, unsigned char error_code) {
     unsigned char error_packet[PACKET_SIZE] = {0};
     error_packet[0] = INIT_MARKER;
