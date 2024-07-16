@@ -86,6 +86,17 @@ int send_movies_list(int sockfd, movies_t *movies) {
     return success;
 }
 
+void free_window_packet_list(window_packet_t *w_packet_init) {
+    window_packet_t *w_packet_current = w_packet_init;
+    window_packet_t *w_packet_next = NULL;
+    while (w_packet_current != NULL) {
+        w_packet_next = w_packet_current->next_packet;
+        free(w_packet_current->packet);
+        free(w_packet_current);
+        w_packet_current = w_packet_next;
+    }
+}
+
 int send_window(int sockfd, window_packet_t *w_packet) {
     for (short i = 0; i < WINDOW_SIZE && w_packet; i++) {
         if (!send_packet_in_timeout(sockfd, w_packet->packet)) {
@@ -105,11 +116,11 @@ void free_packets_list_until_node(window_packet_head_t *w_packet_h,
         free(w_packet_aux->packet);
         free(w_packet_aux);
         w_packet_h->size--;
-        if (w_packet_aux == w_packet_node) {
+        if (w_packet == w_packet_node) {
             break;
         }
     }
-    w_packet_h->head = w_packet;
+    w_packet_h->head = w_packet_node;
 }
 
 void change_last_node_packet_code(window_packet_head_t *w_packet_h, unsigned char code) {
@@ -266,7 +277,6 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
             if (!w_packet_head_aux) {
                 continue;
             }
-            w_packet_head->head = w_packet;
             merge_window_packet_lists(w_packet_head, w_packet_head_aux);
             send_packet_count = 0;
         }
@@ -353,18 +363,6 @@ int send_file_desc(int sockfd, char *file_name) {
     free(pck_file_desc);
     return 0;
 }
-
-void free_window_packet_list(window_packet_t *w_packet_init) {
-    window_packet_t *w_packet_current = w_packet_init;
-    window_packet_t *w_packet_next = NULL;
-    while (w_packet_current != NULL) {
-        w_packet_next = w_packet_current->next_packet;
-        free(w_packet_current->packet);
-        free(w_packet_current);
-        w_packet_current = w_packet_next;
-    }
-}
-
 
 /* (Aloca memoria). Monta uma lista window_packet_t de pacotes a partir
  * de um vetor de dados. */
