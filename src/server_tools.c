@@ -99,7 +99,6 @@ void free_window_packet_list(window_packet_t *w_packet_init) {
 
 int send_window(int sockfd, window_packet_t *w_packet) {
     for (short i = 0; i < WINDOW_SIZE && w_packet; i++) {
-        printf("seq %x code %x\n", get_packet_seq(w_packet->packet), get_packet_code(w_packet->packet));
         if (!send_packet_in_timeout(sockfd, w_packet->packet)) {
             return 0;
         }
@@ -166,14 +165,18 @@ window_packet_t *move_window_until_last_sent_packet(window_packet_t *w_packet,
     unsigned char code = get_packet_code(buffer);
     unsigned char seq = get_packet_seq(buffer);
     short find = 0;
+    printf("cpacket %x buffer %x code %x\n", get_packet_seq(w_packet->packet), seq, code);
     if (code == NACK_COD) {
-        for (short i = 0; i < WINDOW_SIZE && w_packet; i++) {
+        for (short i = 0; i < WINDOW_SIZE; i++) {
             if (get_packet_seq(w_packet->packet) == seq) {
                 find = 1;
                 break;
             }
             w_packet = w_packet->next_packet;
             *send_packet_count += 1;
+            if (!w_packet) {
+                return NULL;
+            }
         }
         if (!find) {
             fprintf(stderr, "Erro: Sequencia fora do range\n");

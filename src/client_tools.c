@@ -89,7 +89,7 @@ int sort_server_packets(unsigned char **server_packets, unsigned char current_se
     unsigned char next_packet_seq = current_seq;
     short j = 0, i = 0;
     for (; i < num_buffers; i++) {
-        for (j = 0; j < num_buffers; j++) {
+        for (j = i; j < num_buffers; j++) {
             if (get_packet_seq(server_packets[j]) == next_packet_seq) {
                 if (i != j) {
                     aux = server_packets[i];
@@ -170,9 +170,8 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
             continue;
         }
 
-
         for (short i = 0; i < idx_sorted_data; i++) {
-            printf("seq %x code %x\n", get_packet_seq(server_packets[i]), 
+            printf(" %d seq %x cseq %x code %x\n", idx_sorted_data, get_packet_seq(server_packets[i]), current_seq,
                                         get_packet_code(server_packets[i]));
             printf("\r");
             printf("Baixando... %d%%", (int)(num_packets*percent));
@@ -184,7 +183,7 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
             num_packets++;
         }
         if (idx_sorted_data == WINDOW_SIZE) {
-            send_ACK(sockfd, current_seq);
+            send_ACK(sockfd, (current_seq - 1) & 0x1f);
         }
         else {
             send_NACK(sockfd, current_seq);
