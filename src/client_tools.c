@@ -170,7 +170,10 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
             continue;
         }
 
+
         for (short i = 0; i < idx_sorted_data; i++) {
+            printf("seq %x code %x\n", get_packet_seq(server_packets[i]), 
+                                        get_packet_code(server_packets[i]));
             printf("\r");
             printf("Baixando... %d%%", (int)(num_packets*percent));
             fflush(stdout);

@@ -99,6 +99,7 @@ void free_window_packet_list(window_packet_t *w_packet_init) {
 
 int send_window(int sockfd, window_packet_t *w_packet) {
     for (short i = 0; i < WINDOW_SIZE && w_packet; i++) {
+        printf("seq %x code %x\n", get_packet_seq(w_packet->packet), get_packet_code(w_packet->packet));
         if (!send_packet_in_timeout(sockfd, w_packet->packet)) {
             return 0;
         }
@@ -134,6 +135,7 @@ window_packet_head_t *get_next_segment_file(FILE *file, unsigned char *sequence,
     window_packet_head_t *w_packet_head = NULL;
     unsigned long int num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
     if (num_bytes_read < DATA_SIZE) {
+        printf("Entrouuuuu eh o ultimo\n");
         return segment_data_in_window_packets(buffer_data, num_bytes_read, 
                                                 END_DATA_COD, sequence);
     }
@@ -165,7 +167,6 @@ window_packet_t *move_window_until_last_sent_packet(window_packet_t *w_packet,
     unsigned char seq = get_packet_seq(buffer);
     short find = 0;
     if (code == NACK_COD) {
-        printf("packet %d buf %d\n", get_packet_seq(w_packet->packet), seq);
         for (short i = 0; i < WINDOW_SIZE && w_packet; i++) {
             if (get_packet_seq(w_packet->packet) == seq) {
                 find = 1;
@@ -371,6 +372,7 @@ window_packet_head_t *segment_data_in_window_packets(unsigned char *data,
                                         unsigned char last_packet_code,
                                         unsigned char *sequence) {
     if (size == 0) {
+        printf("Eh zero o tamanho\n");
         return NULL;
     }
     unsigned short max_size_data = PACKET_SIZE - 4;
@@ -403,7 +405,7 @@ window_packet_head_t *segment_data_in_window_packets(unsigned char *data,
         *sequence &= 0x1f;
     }
     w_packet_last->next_packet = w_packet_current;
-    w_packet_current->packet = create_packet(data, max_size_data, *sequence, DATA_COD);
+    w_packet_current->packet = create_packet(data, max_size_data, *sequence, last_packet_code);
     w_packet_current->next_packet = NULL;
 
     w_packet_head->head = w_packet_init;
