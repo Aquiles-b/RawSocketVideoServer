@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
 
     int sockfd = open_raw_socket(argv[1]);
     while (1) {
-        if (!recv_packet_in_timeout(sockfd, packet_client)) {
+        if (!recv_packet_in_timeout(sockfd, packet_client, 0)) {
             continue;
         }
 

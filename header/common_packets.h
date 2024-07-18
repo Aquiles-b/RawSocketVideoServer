@@ -20,7 +20,7 @@ int send_NACK(int sockfd, unsigned char seq);
 int send_packet(int sockfd, unsigned char *packet);
 
 /* Retorna 1 em caso de sucesso e 0 em falha. */
-int recv_packet_in_timeout(int sockfd, unsigned char *buffer);
+int recv_packet_in_timeout(int sockfd, unsigned char *buffer, int send_nack);
 
 /* Retorna 1 em caso de sucesso e 0 em falha. */
 int send_packet_with_confirm(int sockfd, unsigned char *packet, unsigned char *buffer);

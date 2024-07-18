@@ -160,10 +160,11 @@ void merge_window_packet_lists(window_packet_head_t *w_packet_h1,
 }
 
 window_packet_t *move_window_until_last_sent_packet(window_packet_t *w_packet, 
-                                                    unsigned char *buffer, 
+                                                    unsigned char *client_packet, 
                                                     unsigned long int *send_packet_count) {
-    unsigned char code = get_packet_code(buffer);
-    unsigned char seq = get_packet_seq(buffer);
+    window_packet_t *w_packet_aux = w_packet;
+    unsigned char code = get_packet_code(client_packet);
+    unsigned char seq = get_packet_seq(client_packet);
     short find = 0;
     printf("cpacket %x buffer %x code %x\n", get_packet_seq(w_packet->packet), seq, code);
     if (code == NACK_COD) {
@@ -180,6 +181,7 @@ window_packet_t *move_window_until_last_sent_packet(window_packet_t *w_packet,
         }
         if (!find) {
             fprintf(stderr, "Erro: Sequencia fora do range\n");
+            return w_packet_aux;
         }
     }
     else {
@@ -209,18 +211,23 @@ int send_seg_packets(unsigned char **packets, int sockfd) {
 int send_packets_in_window(window_packet_t *w_packet_head, int sockfd) {
 =======
 int send_packets_in_window(int sockfd, FILE *file_to_send) {
+<<<<<<< HEAD:src/server_tools.c
 >>>>>>> d42b23a ([FIX] janela deslizante (falta algumas coisas))
     unsigned char *buffer;
+=======
+    unsigned char *buffer_data;
+    unsigned char client_packet[PACKET_SIZE] = {0};
+>>>>>>> e39fa6e ([FIX] forma que o cliente manipula os pacotes recebidos):trabalho1/src/server_tools.c
     window_packet_head_t *w_packet_head_aux = NULL, *w_packet_head = NULL;
     window_packet_t *w_packet = NULL;
     unsigned long int send_packet_count = 0;
     unsigned char code, last_packet_sequence = 0;
     int success = 1;
 
-    if (!(buffer = malloc(sizeof(unsigned char) * DATA_SIZE))) {
+    if (!(buffer_data = malloc(sizeof(unsigned char) * DATA_SIZE))) {
         return 0;
     }
-    w_packet_head = get_next_segment_file(file_to_send, &last_packet_sequence, buffer);
+    w_packet_head = get_next_segment_file(file_to_send, &last_packet_sequence, buffer_data);
     w_packet = w_packet_head->head;
 
     while (w_packet) {
@@ -228,6 +235,7 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
             success = 0;
             break;
         }
+<<<<<<< HEAD:src/server_tools.c
 <<<<<<< HEAD
         if (!recv_packet_in_timeout(sockfd, buffer)) {
             success = 0;
@@ -265,19 +273,29 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
             }
             code = get_packet_code(buffer);
             if (code != ACK_COD && code != NACK_COD) {
+=======
+        clear_socket_buffer(sockfd);
+        while (1) {
+            if (!recv_packet_in_timeout(sockfd, client_packet, 0)) {
+>>>>>>> e39fa6e ([FIX] forma que o cliente manipula os pacotes recebidos):trabalho1/src/server_tools.c
                 continue;
             }
-            break;
+            code = get_packet_code(client_packet);
+            if ((code == ACK_COD) || (code == NACK_COD)) {
+                break;
+            }
         }
 
-        w_packet = move_window_until_last_sent_packet(w_packet, buffer, &send_packet_count);
+        w_packet = move_window_until_last_sent_packet(w_packet, client_packet,
+                                                            &send_packet_count);
         if (!w_packet) {
             break;
         }
 
         if ((w_packet_head->size - WINDOW_SIZE + 1 - send_packet_count) < WINDOW_SIZE) {
             free_packets_list_until_node(w_packet_head, w_packet);
-            w_packet_head_aux = get_next_segment_file(file_to_send, &last_packet_sequence, buffer);
+            w_packet_head_aux = get_next_segment_file(file_to_send, 
+                                            &last_packet_sequence, buffer_data);
             if (!w_packet_head_aux) {
                 continue;
             }
@@ -285,7 +303,7 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
             send_packet_count = 0;
         }
     }
-    free(buffer);
+    free(buffer_data);
 
     printf("Saiuuuuu\n");
 
@@ -352,7 +370,7 @@ int send_file_desc(int sockfd, char *file_name) {
         if (send_packet(sockfd, pck_file_desc) == -1) {
             continue;
         }
-        if (!recv_packet_in_timeout(sockfd, buffer)) {
+        if (!recv_packet_in_timeout(sockfd, buffer, 1)) {
             continue;
         }
         client_code = get_packet_code(buffer);

@@ -36,7 +36,7 @@ int recv_and_print_movie_names_packets(int sockfd, unsigned char *packet_server)
 
     printf("-Filmes-------------------------------------\n");
     while (1) {
-        if (!recv_packet_in_timeout(sockfd, packet_server)) {
+        if (!recv_packet_in_timeout(sockfd, packet_server, 1)) {
             success = 0;
             break;
         }
@@ -82,6 +82,12 @@ int view_movies_list(int sockfd, unsigned char *packet_server) {
     return recv_and_print_movie_names_packets(sockfd, packet_server);
 }
 
+/* Retorna 1 se o pacote for de dados e 0 caso contrario. */
+int is_data_packet(unsigned char *packet) {
+    unsigned char code = get_packet_code(packet);
+    return (code == DATA_COD) || (code == END_DATA_COD);
+}
+
 /* Retorna a quantidade de buffers validos em sequencia. */
 int sort_server_packets(unsigned char **server_packets, unsigned char current_seq,
                                                             short num_buffers) {
@@ -90,6 +96,9 @@ int sort_server_packets(unsigned char **server_packets, unsigned char current_se
     short j = 0, i = 0;
     for (; i < num_buffers; i++) {
         for (j = i; j < num_buffers; j++) {
+            if (!is_data_packet(server_packets[j])) {
+                continue;
+            }
             if (get_packet_seq(server_packets[j]) == next_packet_seq) {
                 if (i != j) {
                     aux = server_packets[i];
@@ -108,30 +117,17 @@ int sort_server_packets(unsigned char **server_packets, unsigned char current_se
     return i;
 }
 
-/* Retorna a quantidade de buffers de dados validos. */
-int all_server_packets_are_data(unsigned char **server_packets, short num_buffers) {
-    unsigned char code = 0;
-    short i = 0;
-    for (; i < num_buffers; i++) {
-        code = get_packet_code(server_packets[i]);
-        if (code != DATA_COD && code != END_DATA_COD) {
-            return i;
-        }
-    }
-    return i;
-}
-
 /* Retorna o numero de pacotes validos recebidos. */
 short recv_window_packets(int sockfd, unsigned char **server_packets) {
-    clear_socket_buffer(sockfd);
     short idx_buffer = 0, num_bytes_recv = 0;
-    for (; idx_buffer < WINDOW_SIZE; idx_buffer++) {
+    while (idx_buffer < WINDOW_SIZE) {
         if ((num_bytes_recv = recv(sockfd, server_packets[idx_buffer], PACKET_SIZE, 0)) <= 0) {
-            break;
+            return idx_buffer;
         }
         if (!validate_packet(server_packets[idx_buffer], num_bytes_recv)) {
-            break;
+            continue;
         }
+        idx_buffer++;
     }
     return idx_buffer;
 }
@@ -149,7 +145,7 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     unsigned char current_seq = 0, cod = 0;
     unsigned long int num_packets = 0;
     unsigned short tam_data = 0;
-    short idx_buffer = 0, idx_code_data = 0, idx_sorted_data = 0;
+    short idx_buffer = 0, idx_sorted_data = 0;
 
     unsigned long int total_packets = file_size / (PACKET_SIZE - 4);
     if (file_size % (PACKET_SIZE - 4)) {
@@ -161,11 +157,12 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     clear_socket_buffer(sockfd);
     while (1) {
         idx_buffer = recv_window_packets(sockfd, server_packets);
+        idx_sorted_data = sort_server_packets(server_packets, current_seq, idx_buffer);
 
-        idx_code_data = all_server_packets_are_data(server_packets, idx_buffer);
-        idx_sorted_data = sort_server_packets(server_packets, current_seq, idx_code_data);
+        printf("buf %d sort %d\n", idx_buffer, idx_sorted_data);
 
         if (!idx_sorted_data) {
+            printf("Mandando 0 NACK %x\n", current_seq);
             send_NACK(sockfd, current_seq);
             continue;
         }
@@ -178,14 +175,15 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
             fflush(stdout);
             current_seq++;
             current_seq &= 0x1f;
+            num_packets++;
             tam_data = get_packet_data_size(server_packets[i]);
             fwrite(server_packets[i] + 3, 1, tam_data, file);
-            num_packets++;
         }
         if (idx_sorted_data == WINDOW_SIZE) {
             send_ACK(sockfd, (current_seq - 1) & 0x1f);
         }
         else {
+            printf("Mandando NACK %x\n", current_seq);
             send_NACK(sockfd, current_seq);
         }
 
@@ -216,7 +214,7 @@ void show_movie_date_size_packet(unsigned char *packet_server) {
 
 int handle_recv_file_desc_packet(int sockfd, unsigned char *packet_server) {
     while (1) {
-        if (!recv_packet_in_timeout(sockfd, packet_server)) {
+        if (!recv_packet_in_timeout(sockfd, packet_server, 1)) {
             printf("Sem resposta do server\n\n");
             return 0;
         }

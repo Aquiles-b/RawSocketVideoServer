@@ -24,7 +24,7 @@ int send_packet(int sockfd, unsigned char *packet) {
 }
 
 /* Retorna 1 em caso de sucesso e 0 em falha. */
-int recv_packet_in_timeout(int sockfd, unsigned char *buffer) {
+int recv_packet_in_timeout(int sockfd, unsigned char *buffer, int send_nack) {
     short num_bytes_read = 0;
     time_t start_time = time(NULL);
     while (1) {
@@ -35,7 +35,9 @@ int recv_packet_in_timeout(int sockfd, unsigned char *buffer) {
             continue;
         }
         if (!validate_packet(buffer, num_bytes_read)) {
-            send_NACK(sockfd, 0);
+            if (send_nack) {
+                send_NACK(sockfd, 0);
+            }
             continue;
         }
         return 1;
@@ -53,7 +55,7 @@ int send_packet_with_confirm(int sockfd, unsigned char *packet, unsigned char *b
         if (send_packet(sockfd, packet) == -1) {
             continue;
         }
-        if (!recv_packet_in_timeout(sockfd, buffer)) {
+        if (!recv_packet_in_timeout(sockfd, buffer, 1)) {
             continue;
         }
         if (get_packet_code(buffer) == ACK_COD) {
