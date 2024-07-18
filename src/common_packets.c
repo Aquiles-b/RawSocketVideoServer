@@ -1,5 +1,4 @@
 #include "../header/common_packets.h"
-#include <time.h>
 
 int send_ACK(int sockfd, unsigned char seq) {
     unsigned char ack[PACKET_SIZE] = {0};
@@ -42,6 +41,20 @@ int recv_packet_in_timeout(int sockfd, unsigned char *buffer, int send_nack) {
         }
         return 1;
     }
+}
+
+int recv_ACK_or_NACK(int sockfd, unsigned char *buffer) {
+    unsigned char code = 0;
+    while (1) {
+        if (!recv_packet_in_timeout(sockfd, buffer, 0)) {
+            return 0;
+        }
+        code = get_packet_code(buffer);
+        if ((code == ACK_COD) || (code == NACK_COD)) {
+            break;
+        }
+    }
+    return 1;
 }
 
 /* Retorna 1 em caso de sucesso e 0 em falha. */

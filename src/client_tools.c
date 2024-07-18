@@ -159,17 +159,12 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
         idx_buffer = recv_window_packets(sockfd, server_packets);
         idx_sorted_data = sort_server_packets(server_packets, current_seq, idx_buffer);
 
-        printf("buf %d sort %d\n", idx_buffer, idx_sorted_data);
-
         if (!idx_sorted_data) {
-            printf("Mandando 0 NACK %x\n", current_seq);
             send_NACK(sockfd, current_seq);
             continue;
         }
 
         for (short i = 0; i < idx_sorted_data; i++) {
-            printf(" %d seq %x cseq %x code %x\n", idx_sorted_data, get_packet_seq(server_packets[i]), current_seq,
-                                        get_packet_code(server_packets[i]));
             printf("\r");
             printf("Baixando... %d%%", (int)(num_packets*percent));
             fflush(stdout);
@@ -183,7 +178,6 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
             send_ACK(sockfd, (current_seq - 1) & 0x1f);
         }
         else {
-            printf("Mandando NACK %x\n", current_seq);
             send_NACK(sockfd, current_seq);
         }
 
