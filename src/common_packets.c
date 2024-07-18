@@ -43,11 +43,16 @@ int recv_packet_in_timeout(int sockfd, unsigned char *buffer, int send_nack) {
     }
 }
 
-int recv_ACK_or_NACK(int sockfd, unsigned char *buffer) {
+int recv_ACK_or_NACK(int sockfd, unsigned char *buffer, short num_tries) {
     unsigned char code = 0;
+    short i = 0;
     while (1) {
-        if (!recv_packet_in_timeout(sockfd, buffer, 0)) {
+        if (i == num_tries) {
             return 0;
+        }
+        if (!recv_packet_in_timeout(sockfd, buffer, 0)) {
+            i++;
+            continue;
         }
         code = get_packet_code(buffer);
         if ((code == ACK_COD) || (code == NACK_COD)) {
