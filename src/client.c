@@ -57,7 +57,7 @@ int main(int argc, char *argv[]) {
                 printf("\n");
                 if (try_get_movie(sockfd, packet_server, option)) {
                     printf("Concluido!\n\n");
-                    system("vlc-wrapper stream_movie.mp4 > /etc/null 2>&1");
+                    system("celluloid stream_movie.mp4 > /etc/null 2>&1");
                 }
                 break;
         }

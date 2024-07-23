@@ -226,13 +226,13 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
     }
     w_packet_head = get_next_segment_file(file_to_send, &last_packet_sequence, buffer_data);
     w_packet = w_packet_head->head;
-    unsigned char code;
 
     while (w_packet) {
         if (!send_window(sockfd, w_packet)){
             success = 0;
             break;
         }
+<<<<<<< HEAD:src/server_tools.c
 <<<<<<< HEAD:src/server_tools.c
 <<<<<<< HEAD
         if (!recv_packet_in_timeout(sockfd, buffer)) {
@@ -296,7 +296,18 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
                 break;
             }
 >>>>>>> 3433373 ([FIX] loop para pegar ack):trabalho1/src/server_tools.c
+=======
+        if (!recv_ACK_or_NACK(sockfd, client_packet, 10)) {
+            success = 0;
+            break;
+>>>>>>> 927352f ([FIX] janela deslizante consegue ler mais pacotes):trabalho1/src/server_tools.c
         }
+
+        printf("seq %x: ", get_packet_seq(w_packet->packet));
+        for (short i = 0; i < 63; i++) {
+            printf("%x ", *(w_packet->packet + 3 + i));
+        }
+        printf("\n");
 
         w_packet = move_window_until_last_sent_packet(w_packet, client_packet,
                                                             &send_packet_count);
@@ -316,6 +327,7 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
         }
     }
     free(buffer_data);
+    printf("saiuu\n");
 
     return success;
 >>>>>>> 66e7900 ([FIX] janela deslizante)

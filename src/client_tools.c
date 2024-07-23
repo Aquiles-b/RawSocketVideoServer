@@ -163,6 +163,7 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
             send_NACK(sockfd, current_seq);
             continue;
         }
+        printf("buf %d data %d\n", idx_buffer, idx_sorted_data);
 
         for (short i = 0; i < idx_sorted_data; i++) {
             printf("\r");
