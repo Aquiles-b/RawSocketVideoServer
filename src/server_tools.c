@@ -304,8 +304,8 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
         }
 
         printf("seq %x: ", get_packet_seq(w_packet->packet));
-        for (short i = 0; i < 63; i++) {
-            printf("%x ", *(w_packet->packet + 3 + i));
+        for (short i = 0; i < PACKET_SIZE; i++) {
+            printf("%x ", w_packet->packet[i]);
         }
         printf("\n");
 
