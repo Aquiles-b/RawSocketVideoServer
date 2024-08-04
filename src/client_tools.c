@@ -71,9 +71,13 @@ int recv_and_print_movie_names_packets(int sockfd, unsigned char *packet_server)
 
 int view_movies_list(int sockfd, unsigned char *packet_server) {
     unsigned char *solicit_movies_pckt = create_packet(NULL, 0, 0, LIST_FILES_COD);
+    if (!solicit_movies_pckt) {
+        printf("\n!! Erro ao fazer pedido\n\n");
+        return 0;
+    }
 
     if (!send_packet_with_confirm(sockfd, solicit_movies_pckt, packet_server)) {
-        printf("\nSem resposta do server.\n\n");
+        printf("\n!! Sem resposta do server.\n\n");
         free(solicit_movies_pckt);
         return 0;
     }
@@ -161,20 +165,27 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     
     unsigned char current_seq = 0, cod = 0;
     unsigned long int num_packets = 0;
-    short idx_buffer = 0, idx_sorted_data = 0;
+    short idx_buffer = 0, idx_sorted_data = 0, num_tries = 0, success = 1;
 
     float percent = (float) (PACKET_SIZE - 4) / file_size * 100.0f;
 
     printf("Baixando... 0%%");
     clear_socket_buffer(sockfd);
     while (1) {
+        if (num_tries == 200) {
+            success = 0;
+            break;
+        }
+
         idx_buffer = recv_window_packets(sockfd, server_packets);
         idx_sorted_data = sort_server_packets(server_packets, current_seq, idx_buffer);
 
         if (!idx_sorted_data) {
+            num_tries++;
             send_NACK(sockfd, current_seq);
             continue;
         }
+        num_tries = 0;
 
         for (short i = 0; i < idx_sorted_data; i++) {
             printf("\r");
@@ -198,14 +209,16 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
         }
     }
     fclose(file);
-    printf("\r");
-    printf("Baixando... 100%%\n");
+    if (success) {
+        printf("\r");
+        printf("Baixando... 100%%\n");
+    }
 
     for (short i = 0; i < WINDOW_SIZE; i++) {
         free(server_packets[i]);
     }
 
-    return 1;
+    return success;
 }
 
 void show_movie_date_size_packet(unsigned char *packet_server) {
@@ -220,10 +233,26 @@ void show_movie_date_size_packet(unsigned char *packet_server) {
     printf("Data: %02d/%02d/%d\n", day, month, year);
 }
 
+int client_space_enough(unsigned char *packet_server) {
+    unsigned long int size;
+    memcpy(&size, packet_server + 3, sizeof(size));
+
+    struct statvfs stat;
+    if (statvfs("/", &stat) != 0) {
+        printf("!! Erro ao obter informacoes do disco\n\n");
+        return 0;
+    }
+    unsigned long long free_space = (unsigned long int)stat.f_bsize * stat.f_bavail;
+    float free_space_gb = (float)free_space / 1e9;
+    printf("Espaço livre: %.2f Gb\n", free_space_gb);
+
+    return free_space >= size;
+}
+
 int handle_recv_file_desc_packet(int sockfd, unsigned char *packet_server) {
     while (1) {
         if (!recv_packet_in_timeout(sockfd, packet_server, 1)) {
-            printf("Sem resposta do server\n\n");
+            printf("!! Sem resposta do server\n\n");
             return 0;
         }
         if (get_packet_code(packet_server) == FILE_DESC_COD) {

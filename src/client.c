@@ -6,9 +6,14 @@ int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
     memcpy(data, &opt, sizeof(long int));
     unsigned char *req_file_desc_packet = create_packet(data, sizeof(long int),
                                                         0, DOWNLOAD_FILE_COD);
+    if (!req_file_desc_packet) {
+        printf("!! Erro ao fazer pedido\n\n");
+        return 0;
+    }
 
     if (!send_packet_with_confirm(sockfd, req_file_desc_packet, packet_server)){
         printf("!! Sem resposta do server\n\n");
+        free(req_file_desc_packet);
         return 0;
     }
     free(req_file_desc_packet);
@@ -19,9 +24,8 @@ int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
 
     show_movie_date_size_packet(packet_server);
 
-    opt = get_user_input("Prosseguir com o download? (1-Sim, 2-Nao): ");
-    printf("\n");
-    if (opt != 1) {
+    if (!client_space_enough(packet_server)) {
+        printf("!! Espaco insuficiente\n\n");
         send_error(sockfd, ERROR_DISK_FULL);
         return 0;
     }
@@ -29,7 +33,7 @@ int try_get_movie(int sockfd, unsigned char *packet_server, long int opt) {
 
     unsigned long int size = *((unsigned long int *) (packet_server + 3));
     if (!recv_file(sockfd, "stream_movie.mp4", size)) {
-        printf("!! Erro ao baixar arquivo\n\n");
+        printf("\n!! Erro ao baixar arquivo\n\n");
         return 0;
     }
 
@@ -44,9 +48,10 @@ int main(int argc, char *argv[]) {
 
     unsigned char *packet_server = malloc(sizeof(unsigned char) * PACKET_SIZE);
     long int option = 0;
+    short running = 1;
 
     int sockfd = open_raw_socket(argv[1]);
-    while (1) {
+    while (running) {
         option = get_user_input("1- Mostrar filmes\n2- Baixar arquivo\n3- Sair\n: ");
         switch (option) {
             case 1:
@@ -59,6 +64,9 @@ int main(int argc, char *argv[]) {
                     printf("Concluido!\n\n");
                     system("celluloid stream_movie.mp4 > /etc/null 2>&1");
                 }
+                break;
+            case 3:
+                running = 0;
                 break;
         }
         clear_socket_buffer(sockfd);

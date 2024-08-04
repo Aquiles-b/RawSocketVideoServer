@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/statvfs.h>
 #include "../header/basic_for_packets.h"
 #include "../header/common_packets.h"
 
@@ -21,5 +22,8 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size);
 int handle_recv_file_desc_packet(int sockfd, unsigned char *packet_server);
 
 void show_movie_date_size_packet(unsigned char *packet_server);
+
+/* Retorna 1 se houver espaco suficiente para o arquivo, 0 caso contrario. */
+int client_space_enough(unsigned char *packet_server);
 
 #endif // _CLIENT_TOOLS_H
