@@ -132,6 +132,22 @@ short recv_window_packets(int sockfd, unsigned char **server_packets) {
     return idx_buffer;
 }
 
+void write_data_without_escapes(unsigned char *data, FILE *file) {
+    unsigned short tam_data = get_packet_data_size(data);
+    unsigned char *data_ptr = data + 3;
+    short i = 0;
+    while(i < tam_data) {
+        if ((data_ptr[i] == 0x88) || (data_ptr[i] == 0x81)) {
+            fwrite(data_ptr + i, 1, 1, file);
+            i += 2;
+        }
+        else {
+            fwrite(data_ptr + i, 1, 1, file);
+            i++;
+        }
+    }
+}
+
 int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     FILE *file = fopen(filename, "wb");
     if (file == NULL) {
@@ -144,7 +160,6 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
     }
     unsigned char current_seq = 0, cod = 0;
     unsigned long int num_packets = 0;
-    unsigned short tam_data = 0;
     short idx_buffer = 0, idx_sorted_data = 0;
 
     unsigned long int total_packets = file_size / (PACKET_SIZE - 4);
@@ -163,17 +178,15 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
             send_NACK(sockfd, current_seq);
             continue;
         }
-        printf("buf %d data %d\n", idx_buffer, idx_sorted_data);
 
         for (short i = 0; i < idx_sorted_data; i++) {
             printf("\r");
-            printf("Baixando... %d%%", (int)(num_packets*percent));
+            printf("Baixando... %d%%  %x", (int)(num_packets*percent), current_seq);
             fflush(stdout);
             current_seq++;
             current_seq &= 0x1f;
             num_packets++;
-            tam_data = get_packet_data_size(server_packets[i]);
-            fwrite(server_packets[i] + 3, 1, tam_data, file);
+            write_data_without_escapes(server_packets[i], file);
         }
         if (idx_sorted_data == WINDOW_SIZE) {
             send_ACK(sockfd, (current_seq - 1) & 0x1f);

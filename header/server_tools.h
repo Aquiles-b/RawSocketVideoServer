@@ -61,13 +61,12 @@ unsigned char *create_packet_file_desc(int sockfd, char *file_name);
 /* Retorna 1 se o descritor do arquivo foi enviado com sucesso e 0 se nao foi. */
 int send_file_desc(int sockfd, char *file_name);
 
-void free_window_packet_list(window_packet_t *w_packet_head);
+void free_window_packet_list(window_packet_head_t *w_packet_h);
 
 /* (Aloca memoria). Monta uma lista window_packet_t de pacotes a partir
  * de um vetor de dados. */
 window_packet_head_t *segment_data_in_window_packets(unsigned char *data, 
-                                        const unsigned long int size, 
-                                        unsigned char last_packet_code,
+                                        unsigned long int size, 
                                         unsigned char *sequence);
 
 #endif // _SERVER_TOOLS_H

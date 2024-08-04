@@ -10,7 +10,7 @@ int send_ACK(int sockfd, unsigned char seq) {
 }
 
 int send_NACK(int sockfd, unsigned char seq) {
-    unsigned char nack[PACKET_SIZE] = {0};
+    unsigned char nack[PACKET_SIZE] = {1};
     nack[0] = INIT_MARKER;
     nack[1] = seq >> 3;
     nack[2] = (seq << 5) | NACK_COD;

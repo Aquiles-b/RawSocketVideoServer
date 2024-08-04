@@ -86,15 +86,15 @@ int send_movies_list(int sockfd, movies_t *movies) {
     return success;
 }
 
-void free_window_packet_list(window_packet_t *w_packet_init) {
-    window_packet_t *w_packet_current = w_packet_init;
-    window_packet_t *w_packet_next = NULL;
-    while (w_packet_current != NULL) {
-        w_packet_next = w_packet_current->next_packet;
-        free(w_packet_current->packet);
-        free(w_packet_current);
-        w_packet_current = w_packet_next;
+void free_window_packet_list(window_packet_head_t *w_packet_h) {
+    window_packet_t *w_packet = w_packet_h->head, *w_packet_aux = NULL;
+    while (w_packet) {
+        w_packet_aux = w_packet;
+        w_packet = w_packet->next_packet;
+        free(w_packet_aux->packet);
+        free(w_packet_aux);
     }
+    free(w_packet_h);
 }
 
 int send_window(int sockfd, window_packet_t *w_packet) {
@@ -127,18 +127,22 @@ void change_last_node_packet_code(window_packet_head_t *w_packet_h, unsigned cha
     window_packet_t *w_packet = w_packet_h->tail;
     w_packet->packet[2] &= 0xe0;
     w_packet->packet[2] |= code;
+    w_packet->packet[PACKET_SIZE - 1] = calc_crc_8(w_packet->packet + 1, PACKET_SIZE - 2);
 }
 
 window_packet_head_t *get_next_segment_file(FILE *file, unsigned char *sequence,
                                                         unsigned char *buffer_data) {
     window_packet_head_t *w_packet_head = NULL;
     unsigned long int num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
-    if (num_bytes_read < DATA_SIZE) {
-        return segment_data_in_window_packets(buffer_data, num_bytes_read, 
-                                                END_DATA_COD, sequence);
+    if (num_bytes_read == 0) {
+        return NULL;
     }
     w_packet_head = segment_data_in_window_packets(buffer_data, num_bytes_read, 
-                                                DATA_COD, sequence);
+                                                   sequence);
+    if (num_bytes_read < DATA_SIZE) {
+        change_last_node_packet_code(w_packet_head, END_DATA_COD);
+        return w_packet_head;
+    }
 
     num_bytes_read = fread(buffer_data, 1, DATA_SIZE, file);
     if (num_bytes_read == 0) {
@@ -303,12 +307,6 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
 >>>>>>> 927352f ([FIX] janela deslizante consegue ler mais pacotes):trabalho1/src/server_tools.c
         }
 
-        printf("seq %x: ", get_packet_seq(w_packet->packet));
-        for (short i = 0; i < PACKET_SIZE; i++) {
-            printf("%x ", w_packet->packet[i]);
-        }
-        printf("\n");
-
         w_packet = move_window_until_last_sent_packet(w_packet, client_packet,
                                                             &send_packet_count);
         if (!w_packet) {
@@ -408,56 +406,101 @@ int send_file_desc(int sockfd, char *file_name) {
     return 0;
 }
 
+/* Retorna 1 se for para por um escape simples.
+ * 2 se for necessário o byte ir para o próximo pacote.
+ * 0 se não for necessário o escape. */
+unsigned short need_escape(unsigned char *data, unsigned current_size_packet) {
+    unsigned char cbyte = data[current_size_packet];
+    if ((cbyte == 0x81) || (cbyte == 0x88)) {
+        if (current_size_packet == PACKET_SIZE - 5) {
+            return 2;
+        }
+        return 1;
+    }
+    return 0;
+}
+
+int add_packet_on_list(window_packet_head_t *w_packet_h, unsigned char *packet) {
+    window_packet_t *w_packet = malloc(sizeof(window_packet_t));
+    if (w_packet == NULL) {
+        return 0;
+    }
+    w_packet->packet = packet;
+    w_packet->next_packet = NULL;
+    if (w_packet_h->size == 0) {
+        w_packet_h->head = w_packet;
+        w_packet_h->tail = w_packet;
+    }
+    else {
+        w_packet_h->tail->next_packet = w_packet;
+        w_packet_h->tail = w_packet;
+    }
+    w_packet_h->size++;
+    return 1;
+}
+
+int create_and_add_packet_on_list(unsigned char *data, unsigned short size, 
+                                unsigned char *sequence, 
+                                window_packet_head_t *w_packet_head) {
+    unsigned char *packet = create_packet(data, size, *sequence, DATA_COD);
+    *sequence += 1;
+    *sequence &= 0x1f;
+    if (packet == NULL) {
+        free_window_packet_list(w_packet_head);
+        return 0;
+    }
+    if (!add_packet_on_list(w_packet_head, packet)) {
+        free_window_packet_list(w_packet_head);
+        return 0;
+    }
+    return 1;
+}
+
 /* (Aloca memoria). Monta uma lista window_packet_t de pacotes a partir
  * de um vetor de dados. */
 window_packet_head_t *segment_data_in_window_packets(unsigned char *data, 
-                                        const unsigned long int size, 
-                                        unsigned char last_packet_code,
+                                        unsigned long int size, 
                                         unsigned char *sequence) {
     if (size == 0) {
         return NULL;
     }
-    unsigned short max_size_data = PACKET_SIZE - 4;
-    unsigned long int num_packets = size / max_size_data;
-    unsigned short last_packet_size = size % max_size_data;
-
-    if (last_packet_size != 0) {
-        ++num_packets;
-    } 
-    else {
-        last_packet_size = max_size_data;
-    }
-
+    unsigned char aux_data_packet[PACKET_SIZE - 4] = {0};
+    unsigned short current_size_packet = 0;
+    unsigned short escape = 0, break_packet = 0;
     window_packet_head_t *w_packet_head = malloc(sizeof(window_packet_head_t));
-    window_packet_t *w_packet_init = malloc(sizeof(window_packet_t));
-    window_packet_t *w_packet_current = NULL, *w_packet_last = NULL;
-    unsigned long int i = 0;
+    w_packet_head->size = 0;
 
-    w_packet_current = w_packet_init;
-    w_packet_last = w_packet_init;
+    while (size != 0) {
+        escape = need_escape(data, current_size_packet);
+        if (escape == 1) {
+            aux_data_packet[current_size_packet] = data[current_size_packet];
+            data[current_size_packet] = 0xff;
+            current_size_packet++;
+        } 
+        else if (escape == 2) {
+            break_packet = 1;
+        }
+        else {
+            aux_data_packet[current_size_packet] = data[current_size_packet];
+            data += 1;
+            size -= 1;
+            current_size_packet++;
+        }
 
-    for (; i < num_packets - 1; i++) {
-        w_packet_last->next_packet = w_packet_current;
-        w_packet_current->packet = create_packet(data, max_size_data, *sequence,
-                                                                    DATA_COD);
-        w_packet_last = w_packet_current;
-        w_packet_current = malloc(sizeof(window_packet_t));
-
-        data += max_size_data;
-        *sequence += 1;
-        *sequence &= 0x1f;
+        if ((current_size_packet == PACKET_SIZE - 4) || break_packet) {
+            if (!create_and_add_packet_on_list(aux_data_packet, current_size_packet, 
+                                                sequence, w_packet_head)) {
+                return NULL;
+            }
+            current_size_packet = 0;
+            break_packet = 0;
+        }
     }
-    w_packet_last->next_packet = w_packet_current;
-    w_packet_current->packet = create_packet(data, last_packet_size, *sequence,
-                                                            last_packet_code);
-    w_packet_current->next_packet = NULL;
-
-    w_packet_head->head = w_packet_init;
-    w_packet_head->tail = w_packet_current;
-    w_packet_head->size = num_packets;
-
-    *sequence += 1;
-    *sequence &= 0x1f;
-
+    if (current_size_packet != 0) {
+        if (!create_and_add_packet_on_list(aux_data_packet, current_size_packet, 
+                                            sequence, w_packet_head)) {
+            return NULL;
+        }
+    }
     return w_packet_head;
 }
