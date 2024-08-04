@@ -221,7 +221,7 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
 >>>>>>> e39fa6e ([FIX] forma que o cliente manipula os pacotes recebidos):trabalho1/src/server_tools.c
     window_packet_head_t *w_packet_head_aux = NULL, *w_packet_head = NULL;
     window_packet_t *w_packet = NULL;
-    unsigned long int send_packet_count = 0;
+    unsigned long int send_packet_count = 0, total_packets = 0;
     unsigned char last_packet_sequence = 0;
     int success = 1;
 
@@ -302,10 +302,17 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
 >>>>>>> 3433373 ([FIX] loop para pegar ack):trabalho1/src/server_tools.c
 =======
         if (!recv_ACK_or_NACK(sockfd, client_packet, 10)) {
+            printf("Cansou de esperar\n");
             success = 0;
             break;
 >>>>>>> 927352f ([FIX] janela deslizante consegue ler mais pacotes):trabalho1/src/server_tools.c
         }
+
+        /* printf("seq %x: ", get_packet_seq(w_packet->packet)); */
+        /* for (short i = 0; i < PACKET_SIZE; i++) { */
+        /*     printf("%x ", w_packet->packet[i]); */
+        /* } */
+        /* printf("\n"); */
 
         w_packet = move_window_until_last_sent_packet(w_packet, client_packet,
                                                             &send_packet_count);
@@ -321,11 +328,12 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
                 continue;
             }
             merge_window_packet_lists(w_packet_head, w_packet_head_aux);
+            total_packets += send_packet_count;
             send_packet_count = 0;
         }
     }
+    total_packets += send_packet_count;
     free(buffer_data);
-    printf("saiuu\n");
 
     return success;
 >>>>>>> 66e7900 ([FIX] janela deslizante)
@@ -410,9 +418,9 @@ int send_file_desc(int sockfd, char *file_name) {
  * 2 se for necessário o byte ir para o próximo pacote.
  * 0 se não for necessário o escape. */
 unsigned short need_escape(unsigned char *data, unsigned current_size_packet) {
-    unsigned char cbyte = data[current_size_packet];
+    unsigned char cbyte = *data;
     if ((cbyte == 0x81) || (cbyte == 0x88)) {
-        if (current_size_packet == PACKET_SIZE - 5) {
+        if (current_size_packet == (PACKET_SIZE - 5)) {
             return 2;
         }
         return 1;
@@ -473,21 +481,23 @@ window_packet_head_t *segment_data_in_window_packets(unsigned char *data,
     while (size != 0) {
         escape = need_escape(data, current_size_packet);
         if (escape == 1) {
-            aux_data_packet[current_size_packet] = data[current_size_packet];
-            data[current_size_packet] = 0xff;
-            current_size_packet++;
+            aux_data_packet[current_size_packet] = *data;
+            aux_data_packet[current_size_packet+1] = 0xff;
+            data++;
+            size--;
+            current_size_packet += 2;
         } 
         else if (escape == 2) {
             break_packet = 1;
         }
         else {
-            aux_data_packet[current_size_packet] = data[current_size_packet];
-            data += 1;
-            size -= 1;
+            aux_data_packet[current_size_packet] = *data;
+            data++;
+            size--;
             current_size_packet++;
         }
 
-        if ((current_size_packet == PACKET_SIZE - 4) || break_packet) {
+        if ((current_size_packet == (PACKET_SIZE - 4)) || break_packet) {
             if (!create_and_add_packet_on_list(aux_data_packet, current_size_packet, 
                                                 sequence, w_packet_head)) {
                 return NULL;

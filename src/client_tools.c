@@ -132,10 +132,10 @@ short recv_window_packets(int sockfd, unsigned char **server_packets) {
     return idx_buffer;
 }
 
-void write_data_without_escapes(unsigned char *data, FILE *file) {
-    unsigned short tam_data = get_packet_data_size(data);
-    unsigned char *data_ptr = data + 3;
-    short i = 0;
+void write_data_without_escapes(unsigned char *packet, FILE *file) {
+    unsigned short tam_data = get_packet_data_size(packet);
+    unsigned char *data_ptr = packet + 3;
+    unsigned short i = 0;
     while(i < tam_data) {
         if ((data_ptr[i] == 0x88) || (data_ptr[i] == 0x81)) {
             fwrite(data_ptr + i, 1, 1, file);
@@ -154,21 +154,18 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
         fprintf(stderr, "Erro ao criar o arquivo\n");
         return 0;
     }
-    unsigned char **server_packets = malloc(sizeof(unsigned char *) * WINDOW_SIZE);
+    unsigned char *server_packets[WINDOW_SIZE];
     for (short i = 0; i < WINDOW_SIZE; i++) {
         server_packets[i] = malloc(sizeof(unsigned char) * PACKET_SIZE);
     }
+    
     unsigned char current_seq = 0, cod = 0;
     unsigned long int num_packets = 0;
     short idx_buffer = 0, idx_sorted_data = 0;
 
-    unsigned long int total_packets = file_size / (PACKET_SIZE - 4);
-    if (file_size % (PACKET_SIZE - 4)) {
-        total_packets++;
-    }
-    float percent = 100.0f / total_packets;
+    float percent = (float) (PACKET_SIZE - 4) / file_size * 100.0f;
 
-    printf("Baixando... %d%%", (int)(num_packets*percent));
+    printf("Baixando... 0%%");
     clear_socket_buffer(sockfd);
     while (1) {
         idx_buffer = recv_window_packets(sockfd, server_packets);
@@ -181,7 +178,7 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
 
         for (short i = 0; i < idx_sorted_data; i++) {
             printf("\r");
-            printf("Baixando... %d%%  %x", (int)(num_packets*percent), current_seq);
+            printf("Baixando... %d%%", (int)(num_packets*percent));
             fflush(stdout);
             current_seq++;
             current_seq &= 0x1f;
@@ -200,10 +197,13 @@ int recv_file(int sockfd, char *filename, unsigned long int file_size) {
             break;
         }
     }
-
     fclose(file);
     printf("\r");
     printf("Baixando... 100%%\n");
+
+    for (short i = 0; i < WINDOW_SIZE; i++) {
+        free(server_packets[i]);
+    }
 
     return 1;
 }
