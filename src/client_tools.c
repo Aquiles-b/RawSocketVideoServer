@@ -20,8 +20,9 @@ long int get_user_input(char *text) {
 
 void print_movie(unsigned char *packet, unsigned int id_movie) {
     unsigned char *data = packet + 3;
+    short tam = get_packet_data_size(packet);
 
-    if (id_movie % 2 == 0) {
+    if (id_movie % 2 == 0 || tam > 30) {
         printf("%d- %-30s\n", id_movie, data);
     }
     else {
