@@ -7,7 +7,7 @@ usuário selecione um vídeo para download e posterior reprodução. O vídeo é
 para o cliente antes de ser exibido, evitando a reprodução progressiva típica de outros sistemas de streaming.
 
 ## Formato dos pacotes
-![formato_pacote](https://github.com/user-attachments/assets/27f12260-e827-4190-891e-ced2b307e246)
+![formato_pacote](https://github.com/user-attachments/assets/12b0471b-5abd-4079-a01b-fdcc512b1625)
 
 O protocolo utilizado é inspirado no Kermit, com um formato de frame específico que inclui marcador
 de início, tamanho, sequência, tipo, dados e CRC-8 para detecção de erros. O controle de fluxo é implementado 
