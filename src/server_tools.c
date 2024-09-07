@@ -195,30 +195,9 @@ window_packet_t *move_window_until_last_sent_packet(window_packet_t *w_packet,
 }
 
 /* Retorna 1 se todos os pacotes foram enviados com sucesso e 0 se nao foram. */
-<<<<<<< HEAD
-<<<<<<< HEAD
-int send_seg_packets(unsigned char **packets, int sockfd) {
-    unsigned char *buffer = malloc(sizeof(unsigned char) * PACKET_SIZE);
-    unsigned char seq = 0, seq_ack = 0;
-    unsigned long int i = 0;
-
-    while (packets[i]) {
-        if (send_packet(sockfd, packets[i]) == -1) {
-            continue;
-        }
-        if (!recv_packet_in_timeout(sockfd, buffer)) {
-            continue;
-=======
-int send_packets_in_window(window_packet_t *w_packet_head, int sockfd) {
-=======
 int send_packets_in_window(int sockfd, FILE *file_to_send) {
-<<<<<<< HEAD:src/server_tools.c
->>>>>>> d42b23a ([FIX] janela deslizante (falta algumas coisas))
-    unsigned char *buffer;
-=======
     unsigned char *buffer_data;
     unsigned char client_packet[PACKET_SIZE] = {0};
->>>>>>> e39fa6e ([FIX] forma que o cliente manipula os pacotes recebidos):trabalho1/src/server_tools.c
     window_packet_head_t *w_packet_head_aux = NULL, *w_packet_head = NULL;
     window_packet_t *w_packet = NULL;
     unsigned long int send_packet_count = 0, total_packets = 0;
@@ -236,75 +215,9 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
             success = 0;
             break;
         }
-<<<<<<< HEAD:src/server_tools.c
-<<<<<<< HEAD:src/server_tools.c
-<<<<<<< HEAD
-        if (!recv_packet_in_timeout(sockfd, buffer)) {
-            success = 0;
-            break;
-        }
-
-        code = get_packet_code(buffer);
-        if (code != ACK_COD && code != NACK_COD) {
-            success = 0;
-            break;
->>>>>>> 66e7900 ([FIX] janela deslizante)
-        }
-        seq = get_packet_seq(packets[i]);
-
-<<<<<<< HEAD
-        if (get_packet_code(buffer) == ACK_COD) {
-            seq_ack = get_packet_seq(buffer);
-            if (seq == seq_ack) {
-                i++;
-            }
-        } 
-    }
-    return 1;
-=======
-        w_packet_aux = w_packet;
-        while (w_packet_aux) {
-            if (get_packet_seq(w_packet_aux->packet) == packet_seq) {
-=======
-        while (1) {
-            clear_socket_buffer(sockfd);
-            if (!recv_packet_in_timeout(sockfd, buffer)) {
-                success = 0;
->>>>>>> d42b23a ([FIX] janela deslizante (falta algumas coisas))
-                break;
-            }
-            code = get_packet_code(buffer);
-            if (code != ACK_COD && code != NACK_COD) {
-=======
-        clear_socket_buffer(sockfd);
-<<<<<<< HEAD:src/server_tools.c
-<<<<<<< HEAD:src/server_tools.c
-        while (1) {
-            if (!recv_packet_in_timeout(sockfd, client_packet, 0)) {
->>>>>>> e39fa6e ([FIX] forma que o cliente manipula os pacotes recebidos):trabalho1/src/server_tools.c
-                continue;
-            }
-            code = get_packet_code(client_packet);
-            if ((code == ACK_COD) || (code == NACK_COD)) {
-                break;
-            }
-=======
-        if (!recv_ACK_or_NACK(sockfd, client_packet)) {
-            continue;
->>>>>>> 52495da ([FIX] Ultimo pacote a ser enviado com tamanho maior):trabalho1/src/server_tools.c
-=======
-        while (1) {
-            recv_packet_in_timeout(sockfd, client_packet, 0);
-            code = get_packet_code(client_packet);
-            if (code == ACK_COD || code == NACK_COD) {
-                break;
-            }
->>>>>>> 3433373 ([FIX] loop para pegar ack):trabalho1/src/server_tools.c
-=======
         if (!recv_ACK_or_NACK(sockfd, client_packet, 10)) {
             success = 0;
             break;
->>>>>>> 927352f ([FIX] janela deslizante consegue ler mais pacotes):trabalho1/src/server_tools.c
         }
 
         w_packet = move_window_until_last_sent_packet(w_packet, client_packet,
@@ -330,7 +243,6 @@ int send_packets_in_window(int sockfd, FILE *file_to_send) {
     free_window_packet_list(w_packet_head);
 
     return success;
->>>>>>> 66e7900 ([FIX] janela deslizante)
 }
 
 /* Retorna 1 se o arquivo foi enviado com sucesso e 0 se nao foi. */

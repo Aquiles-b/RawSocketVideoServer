@@ -52,7 +52,7 @@ int main(int argc, char *argv[]) {
 
     int sockfd = open_raw_socket(argv[1]);
     while (running) {
-        option = get_user_input("1- Mostrar filmes\n2- Baixar arquivo\n3- Sair\n: ");
+        option = get_user_input("1- Mostrar videos\n2- Baixar arquivo\n3- Sair\n: ");
         switch (option) {
             case 1:
                 view_movies_list(sockfd, packet_server);

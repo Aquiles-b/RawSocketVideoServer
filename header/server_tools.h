@@ -17,25 +17,16 @@ typedef struct movies {
     unsigned long int num_movies;
 } movies_t;
 
-<<<<<<< HEAD
-#define DATA_SIZE 63000 
-=======
 typedef struct window_packet_t {
     unsigned char *packet;
     struct window_packet_t *next_packet;
 } window_packet_t;
 
-<<<<<<< HEAD
-#define DATA_SIZE 63000
-#define WINDOW_SIZE 5
->>>>>>> 66e7900 ([FIX] janela deslizante)
-=======
 typedef struct window_packet_head_t {
     window_packet_t *head;
     window_packet_t *tail;
     unsigned long int size;
 } window_packet_head_t;
->>>>>>> d42b23a ([FIX] janela deslizante (falta algumas coisas))
 
 unsigned int get_num_files_dir(DIR *dir);
 
